@@ -28,15 +28,15 @@ NUM_SAMPLES = 10000  # Số lượng mẫu dữ liệu tạo ra
 # Các đặc trưng (Features)
 FEATURE_NAMES = ['toan', 'ly', 'hoa', 'sinh', 'van', 'anh', 'lich_su', 'dia_ly', 'tin_hoc']
 FEATURE_DISPLAY_NAMES = {
-    'toan': '📐 Toán',
-    'ly': '⚛️ Lý',
-    'hoa': '🧪 Hóa',
-    'sinh': '🧬 Sinh',
-    'van': '📝 Văn',
-    'anh': '🌍 Anh',
-    'lich_su': '📚 Lịch sử',
-    'dia_ly': '🌏 Địa lý',
-    'tin_hoc': '💻 Tin học'
+    'toan': ' Toán',
+    'ly': ' Lý',
+    'hoa': ' Hóa',
+    'sinh': ' Sinh',
+    'van': ' Văn',
+    'anh': ' Anh',
+    'lich_su': ' Lịch sử',
+    'dia_ly': ' Địa lý',
+    'tin_hoc': ' Tin học'
 }
 
 NUM_FEATURES = len(FEATURE_NAMES)
@@ -142,7 +142,7 @@ LOG_FILE = 'app.log'
 # STREAMLIT CONFIG
 # ============================================================================
 STREAMLIT_CONFIG = {
-    'page_title': '🎓 Hybrid Career AI System',
+    'page_title': '🎓 Hybrid Suggest Career System',
     'page_icon': '🎓',
     'layout': 'wide',
     'initial_sidebar_state': 'expanded'

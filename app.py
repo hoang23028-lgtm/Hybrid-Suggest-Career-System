@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 
 # Cấu hình Streamlit
 st.set_page_config(
-    page_title="🎓 Hybrid Career AI System",
-    page_icon="🎓",
+    page_title="Hybrid Suggest Career System",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -62,11 +62,11 @@ s_tin = 9
 # --- HEADER ---
 col1, col2 = st.columns([0.9, 0.1])
 with col1:
-    st.title("🎓 Hybrid Career AI System")
+    st.title(" Hybrid Suggest Career System")
     st.markdown("*Hệ thống gợi ý ngành học AI lai kết hợp Machine Learning & Fuzzy Logic*")
 
 with col2:
-    if st.button("🏠", help="Quay lại trang chủ", use_container_width=True):
+    if st.button("Home", help="Quay lại trang chủ", use_container_width=True):
         st.session_state.page = "home"
         st.rerun()
 
@@ -74,24 +74,24 @@ st.divider()
 
 # --- SIDEBAR: INPUT SCORES ---
 with st.sidebar:
-    st.header("📊 Nhập thông tin")
+    st.header("Nhập thông tin")
     
     # Nếu ở trang home, hiển thị nút bắt đầu
     if st.session_state.page == "home":
-        if st.button("🚀 Bắt đầu phân tích", use_container_width=True, key="start_btn"):
+        if st.button("Bắt đầu phân tích", use_container_width=True, key="start_btn"):
             st.session_state.page = "analyze"
             st.rerun()
         
         st.info("""
         **Tính năng:**
-        - 🤖 Dự đoán ngành học phù hợp
-        - 📊 Phân tích chi tiết điểm số
-        - 📈 So sánh 8 ngành khác nhau
-        - 💡 Khuyến nghị dựa trên AI
+        - Dự đoán ngành học phù hợp
+        - Phân tích chi tiết điểm số
+        - So sánh 8 ngành khác nhau
+        - Khuyến nghị dựa trên AI
         """)
     
     else:  # Trang phân tích
-        st.subheader("📝 Điểm số các môn (0-10)")
+        st.subheader("Điểm số các môn (0-10)")
         col1, col2 = st.columns(2)
         
         with col1:
@@ -112,15 +112,15 @@ with st.sidebar:
         # Button phân tích
         col1, col2 = st.columns(2)
         with col1:
-            analyze_btn = st.button("📊 Phân tích", use_container_width=True, icon="✨")
+            analyze_btn = st.button("Phân tích", use_container_width=True)
         with col2:
-            check_all_btn = st.button("🎯 Xem tất cả ngành", use_container_width=True)
+            check_all_btn = st.button("Xem tất cả ngành", use_container_width=True)
 
 # --- MAIN CONTENT ---
 if st.session_state.page == "home":
     # === TRANG CHỦ (HOME PAGE) ===
     st.markdown("""
-    # 🎯 Hệ Thống Gợi ý Ngành Học Thông Minh
+    # Hệ Thống Gợi ý Ngành Học Thông Minh
     
     Với công nghệ AI hiện đại, chúng tôi giúp bạn tìm ra ngành học phù hợp nhất 
     dựa trên điểm số và khả năng của bạn.
@@ -129,40 +129,40 @@ if st.session_state.page == "home":
     # Thông tin hệ thống
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("🤖 Mô hình AI", "Random Forest")
+        st.metric("Mô hình AI", "Random Forest")
         st.caption("Huấn luyện trên 1000 mẫu dữ liệu")
     
     with col2:
-        st.metric("🧠 Suy luận", "Fuzzy Logic")
+        st.metric("Suy luận", "Fuzzy Logic")
         st.caption("Xử lý quyết định mờ")
     
     with col3:
-        st.metric("🎓 Ngành", "8 lựa chọn")
+        st.metric("Ngành", "8 lựa chọn")
         st.caption("Đa dạng lĩnh vực")
     
     st.divider()
     
     # Hiển thị thông tin ngành
-    st.subheader("📚 Các Ngành Học Được Hỗ Trợ")
+    st.subheader("Các Ngành Học Được Hỗ Trợ")
     major_info = pd.DataFrame([
-        {"🎓 Ngành": "1️⃣ IT - Công nghệ thông tin", "💡 Ưu tiên": "Toán, Lý, Tin học", "📌 Mô tả": "Phát triển phần mềm, AI, An ninh"},
-        {"🎓 Ngành": "2️⃣ Kinh tế - Kinh doanh", "💡 Ưu tiên": "Toán, Anh, Văn", "📌 Mô tả": "Quản lý, Kế toán, Tiếp thị"},
-        {"🎓 Ngành": "3️⃣ Y khoa - Sức khỏe", "💡 Ưu tiên": "Sinh, Hóa, Lý", "📌 Mô tả": "Bác sĩ, Điều dưỡng, Dược sĩ"},
-        {"🎓 Ngành": "4️⃣ Kỹ thuật - Xây dựng", "💡 Ưu tiên": "Toán, Lý, Tin", "📌 Mô tả": "Xây dựng, Cơ khí, Điện"},
-        {"🎓 Ngành": "5️⃣ Nông - Lâm - Ngư", "💡 Ưu tiên": "Sinh, Địa lý, Hóa", "📌 Mô tả": "Nông nghiệp, Lâm nghiệp"},
-        {"🎓 Ngành": "6️⃣ Sư phạm - Giáo dục", "💡 Ưu tiên": "Văn, Anh, Lịch sử", "📌 Mô tả": "Dạy học, Quản lý giáo dục"},
-        {"🎓 Ngành": "7️⃣ Luật pháp", "💡 Ưu tiên": "Lịch sử, Văn, Anh", "📌 Mô tả": "Luật sư, Công tố viên"},
-        {"🎓 Ngành": "8️⃣ Du lịch - Khách sạn", "💡 Ưu tiên": "Địa lý, Anh, Văn", "📌 Mô tả": "Hướng dẫn, Quản lý khách sạn"},
+        {"Ngành": "1️⃣ IT - Công nghệ thông tin", "💡 Ưu tiên": "Toán, Lý, Tin học", "📌 Mô tả": "Phát triển phần mềm, AI, An ninh"},
+        {"Ngành": "2️⃣ Kinh tế - Kinh doanh", "💡 Ưu tiên": "Toán, Anh, Văn", "📌 Mô tả": "Quản lý, Kế toán, Tiếp thị"},
+        {"Ngành": "3️⃣ Y khoa - Sức khỏe", "💡 Ưu tiên": "Sinh, Hóa, Lý", "📌 Mô tả": "Bác sĩ, Điều dưỡng, Dược sĩ"},
+        {"Ngành": "4️⃣ Kỹ thuật - Xây dựng", "💡 Ưu tiên": "Toán, Lý, Tin", "📌 Mô tả": "Xây dựng, Cơ khí, Điện"},
+        {"Ngành": "5️⃣ Nông - Lâm - Ngư", "💡 Ưu tiên": "Sinh, Địa lý, Hóa", "📌 Mô tả": "Nông nghiệp, Lâm nghiệp"},
+        {"Ngành": "6️⃣ Sư phạm - Giáo dục", "💡 Ưu tiên": "Văn, Anh, Lịch sử", "📌 Mô tả": "Dạy học, Quản lý giáo dục"},
+        {"Ngành": "7️⃣ Luật pháp", "💡 Ưu tiên": "Lịch sử, Văn, Anh", "📌 Mô tả": "Luật sư, Công tố viên"},
+        {"Ngành": "8️⃣ Du lịch - Khách sạn", "💡 Ưu tiên": "Địa lý, Anh, Văn", "📌 Mô tả": "Hướng dẫn, Quản lý khách sạn"},
     ])
     st.dataframe(major_info, use_container_width=True, hide_index=True)
     
     st.divider()
     
     # Hướng dẫn
-    st.subheader("🚀 Cách Sử Dụng")
+    st.subheader("Cách Sử Dụng")
     st.markdown("""
     ### Bước 1: Bắt đầu
-    Nhấn nút **"🚀 Bắt đầu phân tích"** ở sidebar
+    Nhấn nút **"Bắt đầu phân tích"** ở sidebar
     
     ### Bước 2: Nhập Điểm Số
     Điều chỉnh thanh slider cho 9 môn học:
@@ -171,24 +171,24 @@ if st.session_state.page == "home":
     
     ### Bước 3: Phân Tích
     Chọn:
-    - **📊 Phân tích**: Xem kết quả chi tiết cho một ngành
-    - **🎯 Xem tất cả ngành**: So sánh tất cả 8 ngành
+    - **Phân tích**: Xem kết quả chi tiết cho một ngành
+    - **Xem tất cả ngành**: So sánh tất cả 8 ngành
     
     ### Bước 4: Xem Kết Quả
     Nhận được:
-    - ✅ Điểm khuyến nghị
-    - 📊 Bảng phân tích
-    - 📈 Biểu đồ so sánh
+    - Điểm khuyến nghị
+    - Bảng phân tích
+    - Biểu đồ so sánh
     """)
     
     st.divider()
     
     # Công nghệ
-    st.subheader("⚙️ Công Nghệ Được Sử Dụng")
+    st.subheader("Công Nghệ Được Sử Dụng")
     tech_col1, tech_col2 = st.columns(2)
     
     with tech_col1:
-        st.write("**🤖 Machine Learning (Random Forest)**")
+        st.write("**Machine Learning (Random Forest)**")
         st.caption("""
         - 100 cây quyết định
         - Độ chính xác: 84%
@@ -197,7 +197,7 @@ if st.session_state.page == "home":
         """)
     
     with tech_col2:
-        st.write("**🧠 Fuzzy Logic (Mamdani)**")
+        st.write("**Fuzzy Logic (Mamdani)**")
         st.caption("""
         - 9 quy tắc suy luận
         - Input: Điểm ML, Sở thích
@@ -213,7 +213,7 @@ elif st.session_state.page == "analyze":
         # Validate model
         model = get_model()
         if model is None:
-            st.error("❌ Lỗi: Không thể tải mô hình ML. Vui lòng chạy train_model.py trước!")
+            st.error("Lỗi: Không thể tải mô hình ML. Vui lòng chạy train_model.py trước!")
             st.stop()
         
         # Lấy xếp hạng tất cả ngành và tìm ngành phù hợp nhất (sử dụng interest cố định 5.0)
@@ -226,7 +226,7 @@ elif st.session_state.page == "analyze":
         major_name = best_major['major']
         
         # Tab 1: Kết quả chính
-        tab1, tab2, tab3 = st.tabs(["🎯 Kết quả chính", "📊 Phân tích chi tiết", "📈 So sánh ngành"])
+        tab1, tab2, tab3 = st.tabs(["Kết quả chính", "Phân tích chi tiết", "So sánh ngành"])
         
         with tab1:
             st.header("Kết quả Phân Tích")
@@ -236,26 +236,26 @@ elif st.session_state.page == "analyze":
                 col1, col2, col3, col4 = st.columns(4)
                 
                 with col1:
-                    st.metric("📍 Ngành được chọn", major_name)
+                    st.metric("Ngành được chọn", major_name)
                 
                 with col2:
                     color = "🟢" if score >= 75 else "🟡" if score >= 50 else "🔴"
-                    st.metric("💡 Mức độ khuyến nghị", f"{score:.1f}%", delta=f"{color}")
+                    st.metric("Mức độ khuyến nghị", f"{score:.1f}%", delta=f"{color}")
                 
                 with col3:
-                    st.metric("🤖 Điểm ML", f"{ml_score:.1f}/10")
+                    st.metric("Điểm ML", f"{ml_score:.1f}/10")
                 
                 with col4:
-                    st.metric("🔦 Phân tích", "Ngành phù hợp nhất")
+                    st.metric("Phân tích", "Ngành phù hợp nhất")
                 
                 st.divider()
                 
                 # Giải thích chi tiết
-                st.subheader("📝 Giải thích chi tiết")
+                st.subheader("Giải thích chi tiết")
                 st.info(explanation)
                 
                 # Biểu đồ nhân tố ảnh hưởng
-                st.subheader("📊 Breakdown Điểm")
+                st.subheader("Breakdown Điểm")
                 
                 factors_data = {
                     'Yếu tố': ['Khả năng ML'],
@@ -275,7 +275,7 @@ elif st.session_state.page == "analyze":
                 )
                 st.plotly_chart(fig_factors, use_container_width=True)
             else:
-                st.error("❌ Có lỗi xảy ra trong quá trình phân tích. Vui lòng thử lại!")
+                st.error("Có lỗi xảy ra trong quá trình phân tích. Vui lòng thử lại!")
         
         with tab2:
             st.header("Phân Tích Chi Tiết")
@@ -299,7 +299,7 @@ elif st.session_state.page == "analyze":
             st.plotly_chart(fig_radar, use_container_width=True)
             
             # Bảng thống kê
-            st.subheader("📋 Bảng Thống Kê")
+            st.subheader("Bảng Thống Kê")
             stats_df = pd.DataFrame({
                 'Môn học': ['Toán', 'Lý', 'Hóa', 'Sinh', 'Văn', 'Anh', 'Lịch sử', 'Địa lý', 'Tin học'],
                 'Điểm': user_scores,
@@ -313,8 +313,8 @@ elif st.session_state.page == "analyze":
         with tab3:
             st.header("So Sánh Các Ngành")
             
-            # Lấy ranking tất cả ngành (sử dụng interest từ slider)
-            rankings = get_all_majors_ranking(user_scores, s_interest)
+            # Lấy ranking tất cả ngành (sử dụng interest cố định = 5.0)
+            rankings = get_all_majors_ranking(user_scores, 5.0)
             
             # Biểu đồ so sánh
             ranking_df = pd.DataFrame(rankings)
@@ -331,7 +331,7 @@ elif st.session_state.page == "analyze":
             st.plotly_chart(fig_compare, use_container_width=True)
             
             # Bảng chi tiết
-            st.subheader("📊 Chi tiết xếp hạng")
+            st.subheader("Chi tiết xếp hạng")
             for idx, result in enumerate(rankings, 1):
                 with st.expander(f"#{idx} {result['major']} - Điểm: {result['score']:.1f}%"):
                     col1, col2 = st.columns(2)
@@ -342,14 +342,14 @@ elif st.session_state.page == "analyze":
                     st.write(result['explanation'])
         
     elif check_all_btn:
-        st.header("🎯 Top 4 Ngành Phù Hợp Nhất")
+        st.header("Top 4 Ngành Phù Hợp Nhất")
         
         user_scores = [s_toan, s_ly, s_hoa, s_sinh, s_van, s_anh, s_lich_su, s_dia_ly, s_tin]
         
         # Validate model
         model = get_model()
         if model is None:
-            st.error("❌ Lỗi: Không thể tải mô hình ML!")
+            st.error("Lỗi: Không thể tải mô hình ML!")
             st.stop()
         
         # Lấy xếp hạng tất cả ngành (sử dụng interest cố định 5.0)
@@ -375,12 +375,10 @@ elif st.session_state.page == "analyze":
     
     else:
         # Khi đang ở trang phân tích nhưng chưa nhấn nút
-        st.info("💡 Nhập điểm số các môn rồi nhấn **📊 Phân tích** hoặc **🎯 Xem tất cả ngành** để bắt đầu!")
+        st.info("Nhập điểm số các môn rồi nhấn **Phân tích** hoặc **Xem tất cả ngành** để bắt đầu!")
 
 # --- FOOTER ---
 st.divider()
 st.markdown("""
-<div style='text-align: center; color: #999; margin-top: 2rem;'>
-    <p>🚀 Powered by Hybrid AI System | Made with ❤️ for Career Guidance</p>
-</div>
+
 """, unsafe_allow_html=True)

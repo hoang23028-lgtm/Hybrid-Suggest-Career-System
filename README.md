@@ -1,42 +1,42 @@
-# 🎓 Hệ Thống Gợi Ý Ngành Học Thông Minh
+# Hệ Thống Gợi Ý Ngành Học Thông Minh
 
-> **Hybrid Career AI System** - Hệ thống kết hợp Machine Learning + Fuzzy Logic  
+> Hybrid Career AI System - Hệ thống kết hợp Machine Learning + Fuzzy Logic  
 > Giúp học sinh Việt Nam tìm ngành học phù hợp một cách khoa học và chính xác
 
 
-## 🌟 Tính Năng Nổi Bật
+## Tính Năng Nổi Bật
 
 | Tính Năng | Chi Tiết |
 |-----------|---------|
-| 🤖 **Machine Learning** | Random Forest với 100 cây quyết định, độ chính xác 82% |
-| 🧠 **Fuzzy Logic** | 9 quy tắc mờ với hàm đo Gaussian, xử lý quyết định không chắc chắn |
-| ⚡ **Hệ Thống Lai** | Kết hợp ML score + Fuzzy inference → Gợi ý chính xác nhất |
-| 🎨 **Giao Diện Tương Tác** | Streamlit 3 tab: Kết quả, Phân tích chi tiết, So sánh ngành |
-| 📊 **Hình Ảnh Hóa Dữ Liệu** | Radar chart, Biểu đồ batplot, Bảng xếp hạng |
-| 📈 **10,000 Mẫu Dữ Liệu** | Tập dữ liệu lớn với 8 ngành chính |
-| 🔍 **Phân Tích Chi Tiết** | Log từng bước dự đoán, giải thích kết quả |
+| **Machine Learning** | Random Forest với 100 cây quyết định, độ chính xác 82% |
+| **Fuzzy Logic** | 9 quy tắc mờ với hàm đo Gaussian, xử lý quyết định không chắc chắn |
+| **Hệ Thống Lai** | Kết hợp ML score + Fuzzy inference → Gợi ý chính xác nhất |
+| **Giao Diện Tương Tác** | Streamlit 3 tab: Kết quả, Phân tích chi tiết, So sánh ngành |
+| **Hình Ảnh Hóa Dữ Liệu** | Radar chart, Biểu đồ batplot, Bảng xếp hạng |
+| **10,000 Mẫu Dữ Liệu** | Tập dữ liệu lớn với 8 ngành chính |
+| **Phân Tích Chi Tiết** | Log từng bước dự đoán, giải thích kết quả |
 
 ---
 
-## 📂 Cấu Trúc Dự Án
+##  Cấu Trúc Dự Án
 
 ```
 e:/KBS/
 │
-├── 📄 app.py                    ← Giao diện Streamlit (Trang chủ + Phân tích)
-├── 🧠 hybrid_engine.py          ← Lõi AI: ML + Fuzzy Logic (Gaussian functions)
-├── 🎯 train_model.py            ← Huấn luyện Random Forest
-├── 📚 create_data.py            ← Tạo 10,000 mẫu dữ liệu tổng hợp
-├── ⚙️  config.py                ← Cấu hình: 8 ngành, 9 môn, 10K samples
-├── 📋 requirements.txt           ← Thư viện Python
-├── 📊 data_tuyensinh.csv        ← Dataset 10K rows × 10 cols (auto-gen)
-├── 🤖 rf_model.pkl              ← Mô hình ML đã train (13.6 MB, auto-gen)
-└── 📖 README.md                 ← Hướng dẫn này
+├── app.py                    ← Giao diện Streamlit (Trang chủ + Phân tích)
+├── hybrid_engine.py          ← Lõi AI: ML + Fuzzy Logic (Gaussian functions)
+├── train_model.py            ← Huấn luyện Random Forest
+├── create_data.py            ← Tạo 10,000 mẫu dữ liệu tổng hợp
+├── config.py                ← Cấu hình: 8 ngành, 9 môn, 10K samples
+├── requirements.txt           ← Thư viện Python
+├── data_tuyensinh.csv        ← Dataset 10K rows × 10 cols (auto-gen)
+├── rf_model.pkl              ← Mô hình ML đã train (13.6 MB, auto-gen)
+└── README.md                 ← Hướng dẫn này
 ```
 
 ---
 
-## 🏗️ Kiến Trúc Hệ Thống
+## Kiến Trúc Hệ Thống
 
 ```
 INPUT: Điểm 9 môn (0-10) 
@@ -72,9 +72,9 @@ INPUT: Điểm 9 môn (0-10)
 
 ---
 
-## 🚀 Khởi Động Nhanh
+## Khởi Động Nhanh
 
-### 1️⃣ Yêu Cầu Hệ Thống
+### Yêu Cầu Hệ Thống
 
 | Yêu Cầu | Phiên Bản |
 |---------|----------|
@@ -83,7 +83,7 @@ INPUT: Điểm 9 môn (0-10)
 | Ổ cứng | ≥ 500MB |
 | OS | Windows/Linux/macOS |
 
-### 2️⃣ Cài Đặt Nhanh
+### Cài Đặt Nhanh
 
 ```bash
 # Clone hoặc download project
@@ -102,62 +102,62 @@ python train_model.py
 streamlit run app.py
 ```
 
-✅ **Ứng dụng sẽ mở tại:** http://localhost:8504
+**Ứng dụng sẽ mở tại:** http://localhost:8504
 
 ---
 
-## 📖 Hướng Dẫn Sử Dụng Chi Tiết
+## Hướng Dẫn Sử Dụng Chi Tiết
 
-### 🎯 Bước 1: Nhập Điểm Số
+### Bước 1: Nhập Điểm Số
 
 
 Điều chỉnh 9 thanh trượt ở Sidebar:
 
-| 📚 Môn Học | 🎯 Tầm Quan Trọng | 💡 Gợi Ý |
+| Môn Học | Tầm Quan Trọng | Gợi Ý |
 |-----------|-----------------|---------|
-| **Toán** 🔢 | Rất cao | ⭐⭐⭐⭐⭐ (IT, Kỹ thuật, Kinh tế) |
-| **Lý** ⚛️ | Cao | ⭐⭐⭐⭐ (Kỹ thuật, IT, Y khoa) |
-| **Hóa** 🧪 | Cao | ⭐⭐⭐⭐ (Y khoa, Kỹ thuật) |
-| **Sinh** 🧬 | Cao | ⭐⭐⭐⭐⭐ (Y khoa, Nông-Lâm-Ngư) |
-| **Văn** ✍️ | Trung bình | ⭐⭐⭐ (Sư phạm, Luật pháp, Kinh tế) |
-| **Anh** 🌍 | Trung bình | ⭐⭐⭐ (Kinh tế, Sư phạm, Luật pháp) |
-| **Lịch sử** 📜 | Trung bình | ⭐⭐⭐ (Luật pháp, Sư phạm) |
-| **Địa lý** 🗺️ | Trung bình | ⭐⭐⭐ (Nông-Lâm-Ngư, Du lịch) |
-| **Tin học** 💻 | Cao | ⭐⭐⭐⭐ (IT, Kỹ thuật) |
+| **Toán** | Rất cao |  (IT, Kỹ thuật, Kinh tế) |
+| **Lý** | Cao |  (Kỹ thuật, IT, Y khoa) |
+| **Hóa** | Cao |  (Y khoa, Kỹ thuật) |
+| **Sinh** | Cao |  (Y khoa, Nông-Lâm-Ngư) |
+| **Văn** | Trung bình |  (Sư phạm, Luật pháp, Kinh tế) |
+| **Anh** | Trung bình |  (Kinh tế, Sư phạm, Luật pháp) |
+| **Lịch sử** | Trung bình |  (Luật pháp, Sư phạm) |
+| **Địa lý** | Trung bình |  (Nông-Lâm-Ngư, Du lịch) |
+| **Tin học** | Cao |  (IT, Kỹ thuật) |
 
 **Mỗi môn:** 0-10 điểm
 
-### 📊 Bước 2: Phân Tích Kết Quả
+### Bước 2: Phân Tích Kết Quả
 
-Nhấn nút **"📊 Phân Tích"** hoặc **"🎯 Xem tất cả ngành"**
+Nhấn nút **"Phân Tích"** hoặc **"Xem tất cả ngành"**
 
 System sẽ:
-1. ✅ Đưa dữ liệu qua Random Forest → **ML Score** (0-10)
-2. ✅ Cộng với Interest Score (mặc định = 5.0)
-3. ✅ Chuyển vào Fuzzy Logic System
-4. ✅ Tính **Recommendation Score** (0% - 100%)
+1. Đưa dữ liệu qua Random Forest → **ML Score** (0-10)
+2. Cộng với Interest Score (mặc định = 5.0)
+3. Chuyển vào Fuzzy Logic System
+4. Tính **Recommendation Score** (0% - 100%)
 
-### 📈 Bước 3: Xem & Phân Tích Kết Quả
+### Bước 3: Xem & Phân Tích Kết Quả
 
-**Tab 1️⃣ - Kết Quả Chính**
-- 🎯 Ngành được khuyến nghị
-- 📊 ML Score
-- 💯 Recommendation Score (%)
-- 📝 Giải thích chi tiết
+**Tab 1️- Kết Quả Chính**
+- Ngành được khuyến nghị
+- ML Score
+- Recommendation Score (%)
+- Giải thích chi tiết
 
-**Tab 2️⃣ - Phân Tích Chi Tiết**
-- 🎨 Radar Chart: Hiển thị điểm mạnh/yếu ở 9 môn
-- 📋 Bảng Thống Kê: Chi tiết từng kỹ năng
-- 📈 Biểu đồ xu hướng
+**Tab 2️- Phân Tích Chi Tiết**
+- Radar Chart: Hiển thị điểm mạnh/yếu ở 9 môn
+- Bảng Thống Kê: Chi tiết từng kỹ năng
+- Biểu đồ xu hướng
 
-**Tab 3️⃣ - So Sánh 4 Ngành Hàng Đầu**
-- 📊 Bar Chart: So sánh 4 ngành top
-- 🥇🥈🥉 Bảng xếp hạng
-- 💯 Tỷ lệ phần trăm mỗi ngành
+**Tab 3️- So Sánh 4 Ngành Hàng Đầu**
+- Bar Chart: So sánh 4 ngành top
+- Bảng xếp hạng
+- Tỷ lệ phần trăm mỗi ngành
 
 ---
 
-## 🎓 8 Ngành Được Hỗ Trợ
+## 8 Ngành Được Hỗ Trợ
 
 | # | Ngành | Icon | Yêu Cầu Môn | Mô Tả | Sự Nghiệp |
 |----|-------|------|-----------|-------|----------|
@@ -172,7 +172,7 @@ System sẽ:
 
 ---
 
-## 🔧 Chi Tiết Kỹ Thuật
+## Chi Tiết Kỹ Thuật
 
 ### Machine Learning
 
@@ -185,7 +185,7 @@ Model: Random Forest Classifier
 └── Cross Validation: 5-fold, Acc ≈ 83%
 
 Performance:
-├── Test Accuracy: 82.35% ✅
+├── Test Accuracy: 82.35% 
 ├── Precision: 0.82
 ├── Recall: 0.82
 └── F1-Score: 0.82
@@ -229,7 +229,7 @@ Tác dụng:
 
 ---
 
-## 📊 Dữ Liệu Huấn Luyện
+## Dữ Liệu Huấn Luyện
 
 ```
 Dataset: 10,000 mẫu tổng hợp
@@ -264,7 +264,7 @@ networkx           3.3     # Network analysis (optional)
 
 ---
 
-## 🎬 Quy Trình Thực Thi
+## Quy Trình Thực Thi
 
 ### 1. Tạo Dữ Liệu
 
@@ -303,9 +303,9 @@ $ streamlit run app.py
 
 ---
 
-## 🐛 Khắc Phục Sự Cố
+## Khắc Phục Sự Cố
 
-### ❌ Lỗi: "ModuleNotFoundError"
+### Lỗi: "ModuleNotFoundError"
 
 **Nguyên nhân:** Thư viện chưa cài đặt
 
@@ -316,7 +316,7 @@ pip install -r requirements.txt
 pip install streamlit scikit-learn scikit-fuzzy pandas numpy plotly
 ```
 
-### ❌ Lỗi: "rf_model.pkl not found"
+### Lỗi: "rf_model.pkl not found"
 
 **Nguyên nhân:** Mô hình chưa huấn luyện
 
@@ -326,7 +326,7 @@ python create_data.py
 python train_model.py
 ```
 
-### ❌ Lỗi: "Port 8504 already in use"
+### Lỗi: "Port 8504 already in use"
 
 **Nguyên nhân:** Ứng dụng đang chạy ở port khác
 
@@ -343,7 +343,7 @@ taskkill /IM streamlit.exe
 lsof -i :8504 | grep LISTEN | awk '{print $2}' | xargs kill -9
 ```
 
-### ❌ Lỗi: "Memory Error"
+### Lỗi: "Memory Error"
 
 **Nguyên nhân:** RAM không đủ
 
@@ -351,18 +351,18 @@ lsof -i :8504 | grep LISTEN | awk '{print $2}' | xargs kill -9
 - Giảm NUM_SAMPLES trong config.py từ 10000 → 5000
 - Đóng các ứng dụng khác
 
-### ❌ Output bị "Mịn quá" (mặc định đã sửa ✅)
+### Output bị "Mịn quá" (mặc định đã sửa)
 
 **Nguyên nhân:** Membership functions cũ (triangular)
 
 **Giải pháp:** (Đã áp dụng)
-- ✅ Thay triangular → Gaussian
-- ✅ Thêm input noise (±0.2)
-- ✅ Power scaling: prob^0.6
+- Thay triangular → Gaussian
+- Thêm input noise (±0.2)
+- Power scaling: prob^0.6
 
 ---
 
-## 📈 Ví Dụ Kết Quả
+## Ví Dụ Kết Quả
 
 ### Scenario 1: Học sinh Khoa học tốt
 
@@ -375,10 +375,10 @@ Anh: 6     |  Lịch: 5   |  Địa: 5
 
 **Output:**
 ```
-🥇 IT - Công Nghệ Thông Tin     | 74.23% (ML: 8.5)
-🥈 Kỹ Thuật - Xây Dựng          | 68.45% (ML: 7.8)
-🥉 Y Khoa - Sức Khỏe            | 62.89% (ML: 6.9)
-4️⃣ Nông-Lâm-Ngư                | 51.23% (ML: 4.2)
+IT - Công Nghệ Thông Tin     | 74.23% (ML: 8.5)
+Kỹ Thuật - Xây Dựng          | 68.45% (ML: 7.8)
+Y Khoa - Sức Khỏe            | 62.89% (ML: 6.9)
+Nông-Lâm-Ngư                | 51.23% (ML: 4.2)
 ```
 
 ### Scenario 2: Học sinh Văn chương tốt
@@ -392,15 +392,15 @@ Anh: 8.5   |  Lịch: 8   |  Địa: 7
 
 **Output:**
 ```
-🥇 Sư Phạm - Giáo Dục           | 71.56% (ML: 8.1)
-🥈 Luật Pháp                    | 68.34% (ML: 7.5)
-🥉 Kinh Tế - Kinh Doanh         | 55.67% (ML: 5.2)
-4️⃣ Du Lịch - Khách Sạn         | 48.90% (ML: 3.8)
+Sư Phạm - Giáo Dục           | 71.56% (ML: 8.1)
+Luật Pháp                    | 68.34% (ML: 7.5)
+Kinh Tế - Kinh Doanh         | 55.67% (ML: 5.2)
+Du Lịch - Khách Sạn         | 48.90% (ML: 3.8)
 ```
 
 ---
 
-## 📚 Tài Nguyên & Tham Khảo
+## Tài Nguyên & Tham Khảo
 
 | Tài Liệu | Link |
 |---------|------|
@@ -413,21 +413,21 @@ Anh: 8.5   |  Lịch: 8   |  Địa: 7
 
 ---
 
-## 💡 Các Cải Tiến Trong Phiên Bản
+## Các Cải Tiến Trong Phiên Bản
 
-### v1.0 - Initial Release ✅
+### v1.0 - Initial Release 
 - [x] Machine Learning (RF classifier)
 - [x] Fuzzy Logic (Mamdani system)
 - [x] Streamlit UI
 - [x] 8 ngành học
 - [x] Visualizations
 
-### v1.1 - Optimization (Current) ✅
+### v1.1 - Optimization (Current) 
 - [x] Gaussian membership functions (v1.0 triangular)
 - [x] ML Score power scaling (v1.0 linear)
 - [x] Input noise (continuous output)
 - [x] Fine-tuned parameters
-- [x] **Accuracy: 82.35%** ✅
+- [x] **Accuracy: 82.35%** 
 
 ### v1.2 - Planned
 - [ ] Thêm ngành học mới
@@ -438,41 +438,15 @@ Anh: 8.5   |  Lịch: 8   |  Địa: 7
 
 ---
 
-## 📞 Liên Hệ & Hỗ Trợ
-
-- 📧 **Email:** support@careerai.vn
-- 💬 **Issues:** GitHub Issues
-- 📱 **Chat:** Discord Community
-- 🐛 **Bug Report:** [Report Here]
-
 ---
 
-## 📄 License
 
-Dự án này được phát hành dưới **MIT License**
 
-```
-MIT License © 2026 Career Recommendation System
-Bạn có quyền sử dụng, sửa đổi và phân phối mã này.
-```
 
----
 
-## 🎉 Cảm Ơn & Ghi Nhận
 
-Cảm ơn:
-- 🙏 Các tác giả của Scikit-Learn, Scikit-Fuzzy, Streamlit
-- 🙏 Cộng đồng Python Việt Nam
-- 🙏 Tất cả các bạn học sinh sử dụng hệ thống
-
----
-
-**Made with ❤️ for Vietnamese Students  |  Hybrid Career AI System v1.1**
-- ✓ Tạo requirements.txt với versions
-- ✓ Tạo config.py cho cấu hình tập trung
-- ✓ Tạo README.md toàn diện
-
-## 📈 Kỹ Thuật Ai Dùng
+--
+## 📈 Kỹ Thuật  Dùng
 
 ### Machine Learning: Random Forest
 ```
@@ -498,10 +472,10 @@ Cảm ơn:
 2. **Fuzzy** kết hợp với sở thích: 0-100%
 3. **Giải thích** chi tiết bằng luật
 
-## 📊 Kết Quả Mô Hình Mẫu
+## Kết Quả Mô Hình Mẫu
 
 ```
-✅ HOÀN THÀNH: Mô hình đã sẵn sàng!
+HOÀN THÀNH: Mô hình đã sẵn sàng!
 ===================================================
 
 Testing Accuracy: 0.8400 (84.00%)
@@ -525,7 +499,7 @@ Phân bố dữ liệu (1000 mẫu):
 - Du lịch: 24 (2.4%)
 ```
 
-## 🔄 Luồng Hoạt Động
+## Luồng Hoạt Động
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -554,14 +528,14 @@ Phân bố dữ liệu (1000 mẫu):
 └─────────────────────────────────────────────────────┘
 ```
 
-## 💾 Cách Mô Hình Được Lưu Trữ
+## Cách Mô Hình Được Lưu Trữ
 
 - **Format**: Pickle (.pkl)
 - **File**: `rf_model.pkl`
 - **Kích thước**: ~50-100 KB
 - **Tối ưu**: Chỉ load một lần, cache trong memory
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Lỗi: "Không tìm thấy file data_tuyensinh.csv"
 ```bash
@@ -582,7 +556,7 @@ pip install -r requirements.txt
 - Capping được thực hiện tự động
 - Nếu vẫn chậm, restart Streamlit: `Ctrl+C` và chạy lại
 
-## 📝 Logs
+## Logs
 
 Tất cả logs được ghi vào console và file `app.log` (nếu configured).
 
@@ -591,7 +565,7 @@ Tất cả logs được ghi vào console và file `app.log` (nếu configured).
 2024-03-30 10:15:33,456 - __main__ - INFO - ✓ Dữ liệu đã được load thành công!
 ```
 
-## 🎨 Customization
+## Customization
 
 Chỉnh sửa các tham số trong `config.py`:
 
@@ -606,7 +580,7 @@ CV_FOLDS = 10
 NGANH_HOC_MAP[4] = "Ngành mới"
 ```
 
-## 📚 Thư Viện Sử Dụng
+## Thư Viện Sử Dụng
 
 | Thư viện | Hàm năng | Version |
 |---------|---------|---------|
@@ -618,32 +592,7 @@ NGANH_HOC_MAP[4] = "Ngành mới"
 | plotly | Interactive charts | ≥5.17.0 |
 | networkx | Graph analysis | ≥3.1 |
 
-## 📄 License
 
-MIT License - Tự do sử dụng cho mục đích giáo dục và thương mại.
 
-## 👨‍💻 Contributors
-
-- **Tác giả**: Hybrid AI System Team
-- **Bảo trì**: Cập nhật thường xuyên
-
-## 📞 Support
-
-Nếu gặp vấn đề:
-1. Kiểm tra Troubleshooting section
-2. Xem logs trong console
-3. Kiểm tra phiên bản Python (3.8+) và thư viện
-
-## 🔮 Tương Lai
-
-- [ ] Thêm support cho tiếng Anh
-- [ ] Deployment trên cloud (Streamlit Cloud, Heroku)
-- [ ] Mobile app version
-- [ ] Thêm tiên đoán theo thời gian
-- [ ] Integration với hệ thống ĐH
-- [ ] Advanced visualization (3D charts)
 
 ---
-
-**Made with ❤️ for Career Guidance** 🎓
-

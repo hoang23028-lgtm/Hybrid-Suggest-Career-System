@@ -150,14 +150,14 @@ def generate_synthetic_data(num_samples=NUM_SAMPLES, output_file=DATA_PATH):
     
     # Validation dữ liệu
     if data.isnull().sum().sum() > 0:
-        logger.warning("⚠️ Phát hiện giá trị NULL trong dữ liệu!")
+        logger.warning(" Phát hiện giá trị NULL trong dữ liệu!")
     
     if not all(val in NGANH_HOC_MAP for val in data['nganh_hoc'].unique()):
-        logger.error("❌ Lỗi: Có giá trị nhãn không hợp lệ!")
+        logger.error(" Lỗi: Có giá trị nhãn không hợp lệ!")
         return None
     
     # Thống kê phân bố dữ liệu
-    logger.info("\n📊 Phân bố ngành học:")
+    logger.info("\n Phân bố ngành học:")
     for major_id in sorted(NGANH_HOC_MAP.keys()):
         major_name = NGANH_HOC_MAP[major_id]
         count = (data['nganh_hoc'] == major_id).sum()
@@ -167,12 +167,12 @@ def generate_synthetic_data(num_samples=NUM_SAMPLES, output_file=DATA_PATH):
     # Lưu dữ liệu
     try:
         data.to_csv(output_file, index=False)
-        logger.info(f"\n✅ Thành công: Dữ liệu đã được lưu tại '{output_file}'")
+        logger.info(f"\n Thành công: Dữ liệu đã được lưu tại '{output_file}'")
         logger.info(f"  Kích thước: {len(data)} hàng × {len(data.columns)} cột")
         logger.info(f"  Features: {FEATURE_NAMES}")
         return data
     except Exception as e:
-        logger.error(f"❌ Lỗi khi lưu file: {e}")
+        logger.error(f" Lỗi khi lưu file: {e}")
         return None
 
 if __name__ == "__main__":

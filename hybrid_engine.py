@@ -26,18 +26,18 @@ def load_model():
     
     try:
         if not os.path.exists(MODEL_PATH):
-            logger.error(f"❌ Không tìm thấy file mô hình: {MODEL_PATH}")
+            logger.error(f" Không tìm thấy file mô hình: {MODEL_PATH}")
             logger.error("   Vui lòng chạy train_model.py trước!")
             return None
         
-        logger.info(f"📦 Load mô hình từ '{MODEL_PATH}'...")
+        logger.info(f" Load mô hình từ '{MODEL_PATH}'...")
         with open(MODEL_PATH, 'rb') as f:
             _model_cache = pickle.load(f)
         logger.info("   ✓ Mô hình đã được load thành công!")
         return _model_cache
         
     except Exception as e:
-        logger.error(f"❌ Lỗi khi load mô hình: {e}")
+        logger.error(f" Lỗi khi load mô hình: {e}")
         return None
 
 def create_fuzzy_system():
@@ -100,15 +100,15 @@ def get_hybrid_advice(user_scores, interest_score, major_index=0):
     try:
         # Validation input
         if not isinstance(user_scores, (list, tuple)) or len(user_scores) != 9:
-            logger.error(f"❌ Lỗi: user_scores phải là danh sách 9 điểm! Nhận được {len(user_scores)}")
+            logger.error(f" Lỗi: user_scores phải là danh sách 9 điểm! Nhận được {len(user_scores)}")
             return None, "Lỗi: Dữ liệu đầu vào không hợp lệ", 0, ""
         
         if not (0 <= interest_score <= 10):
-            logger.error("❌ Lỗi: interest_score phải nằm trong khoảng [0, 10]")
+            logger.error(" Lỗi: interest_score phải nằm trong khoảng [0, 10]")
             return None, "Lỗi: Điểm sở thích không hợp lệ", 0, ""
         
         if not (0 <= major_index < len(NGANH_HOC_MAP)):
-            logger.error(f"❌ Lỗi: major_index phải nằm trong [0, {len(NGANH_HOC_MAP)-1}]")
+            logger.error(f" Lỗi: major_index phải nằm trong [0, {len(NGANH_HOC_MAP)-1}]")
             return None, "Lỗi: Index ngành không hợp lệ", 0, ""
         
         # 1. LẤY DỰ ĐOÁN TỪ ML
@@ -144,34 +144,34 @@ def get_hybrid_advice(user_scores, interest_score, major_index=0):
         
         # 3. TẠO LỜI GIẢI THÍCH EVENT CHI TIẾT
         major_name = NGANH_HOC_MAP.get(major_index, "Không xác định")
-        explanation = f"📊 Phân tích cho ngành: {major_name}\n\n"
+        explanation = f" Phân tích cho ngành: {major_name}\n\n"
         
-        explanation += f"🤖 ML dự đoán:\n"
+        explanation += f" ML dự đoán:\n"
         explanation += f"   - Khả năng tương thích: {ml_score:.1f}/10\n\n"
         
-        explanation += f"❤️ Sở thích cá nhân: {interest_score:.1f}/10\n\n"
+        explanation += f" Sở thích cá nhân: {interest_score:.1f}/10\n\n"
         
-        explanation += f"📈 Kết quả cuối cùng: {final_score:.1f}%\n\n"
+        explanation += f" Kết quả cuối cùng: {final_score:.1f}%\n\n"
         
         # Nhận xét chi tiết
         if final_score >= 75:
-            explanation += "🟢 Rất phù hợp! Ngành này là lựa chọn tuyệt vời cho bạn."
+            explanation += " Rất phù hợp! Ngành này là lựa chọn tuyệt vời cho bạn."
         elif final_score >= 50:
-            explanation += "🟡 Khá phù hợp. Bạn có thể xem xét ngành này kèm các lựa chọn khác."
+            explanation += " Khá phù hợp. Bạn có thể xem xét ngành này kèm các lựa chọn khác."
         else:
-            explanation += "🔴 Không quá phù hợp. Bạn nên xem xét các ngành khác có tiềm năng cao hơn."
+            explanation += " Không quá phù hợp. Bạn nên xem xét các ngành khác có tiềm năng cao hơn."
         
         if interest_score > 7:
-            explanation += "\n\n✨ Sở thích cao của bạn giúp tăng cộng hiệu suất học tập đáng kể!"
+            explanation += "\n\n Sở thích cao của bạn giúp tăng cộng hiệu suất học tập đáng kể!"
         elif interest_score < 4:
-            explanation += "\n\n⚠️ Mức độ sở thích thấp có thể ảnh hưởng đến hiệu suất học tập."
+            explanation += "\n\n Mức độ sở thích thấp có thể ảnh hưởng đến hiệu suất học tập."
         
         logger.info(f"✓ Dự đoán hoàn thành: {major_name} | Score: {final_score:.2f}%")
         
         return final_score, explanation, ml_score, major_name
         
     except Exception as e:
-        logger.error(f"❌ Lỗi trong get_hybrid_advice: {e}")
+        logger.error(f" Lỗi trong get_hybrid_advice: {e}")
         import traceback
         logger.error(traceback.format_exc())
         return None, f"Lỗi: {str(e)}", 0, ""
