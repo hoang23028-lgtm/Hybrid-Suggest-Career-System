@@ -23,7 +23,7 @@ RF_PARAMS = {
 # DỮ LIỆU
 # ============================================================================
 DATA_PATH = 'data_tuyensinh.csv'
-NUM_SAMPLES = 10000  # Số lượng mẫu dữ liệu tạo ra
+NUM_SAMPLES = 50000  # Số lượng mẫu dữ liệu tạo ra
 
 # Các đặc trưng (Features)
 FEATURE_NAMES = ['toan', 'ly', 'hoa', 'sinh', 'van', 'anh', 'lich_su', 'dia_ly', 'tin_hoc']
@@ -160,8 +160,7 @@ DEFAULT_VALUES = {
     'anh': 8,
     'lich_su': 6,
     'dia_ly': 6,
-    'tin_hoc': 9,
-    'interest': 7
+    'tin_hoc': 9
 }
 
 # ============================================================================

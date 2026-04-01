@@ -130,7 +130,7 @@ if st.session_state.page == "home":
     col1, col2, col3 = st.columns(3)
     with col1:
         st.metric("Mô hình AI", "Random Forest")
-        st.caption("Huấn luyện trên 1000 mẫu dữ liệu")
+        st.caption("Huấn luyện trên 10000 mẫu dữ liệu")
     
     with col2:
         st.metric("Suy luận", "Fuzzy Logic")
@@ -200,7 +200,7 @@ if st.session_state.page == "home":
         st.write("**Fuzzy Logic (Mamdani)**")
         st.caption("""
         - 9 quy tắc suy luận
-        - Input: Điểm ML, Sở thích
+        - Input: Điểm ML
         - Output: Điểm khuyến nghị (0-100%)
         - Xử lý quyết định mờ
         """)
@@ -217,7 +217,7 @@ elif st.session_state.page == "analyze":
             st.stop()
         
         # Lấy xếp hạng tất cả ngành và tìm ngành phù hợp nhất (sử dụng interest cố định 5.0)
-        all_rankings = get_all_majors_ranking(user_scores, 5.0)
+        all_rankings = get_all_majors_ranking(user_scores)
         best_major = max(all_rankings, key=lambda x: x['score'])
         
         score = best_major['score']
@@ -253,27 +253,6 @@ elif st.session_state.page == "analyze":
                 # Giải thích chi tiết
                 st.subheader("Giải thích chi tiết")
                 st.info(explanation)
-                
-                # Biểu đồ nhân tố ảnh hưởng
-                st.subheader("Breakdown Điểm")
-                
-                factors_data = {
-                    'Yếu tố': ['Khả năng ML'],
-                    'Ảnh hưởng': [ml_score],
-                    'Tối đa': [10]
-                }
-                fig_factors = go.Figure(data=[
-                    go.Bar(x=['Khả năng ML'], 
-                           y=[ml_score],
-                           marker_color=['#667eea'])
-                ])
-                fig_factors.update_layout(
-                    title="Các yếu tố ảnh hưởng đến kết quả",
-                    xaxis_title="Yếu tố",
-                    yaxis_title="Điểm (0-10)",
-                    height=400
-                )
-                st.plotly_chart(fig_factors, use_container_width=True)
             else:
                 st.error("Có lỗi xảy ra trong quá trình phân tích. Vui lòng thử lại!")
         
@@ -313,8 +292,8 @@ elif st.session_state.page == "analyze":
         with tab3:
             st.header("So Sánh Các Ngành")
             
-            # Lấy ranking tất cả ngành (sử dụng interest cố định = 5.0)
-            rankings = get_all_majors_ranking(user_scores, 5.0)
+            # Lấy ranking tất cả ngành
+            rankings = get_all_majors_ranking(user_scores)
             
             # Biểu đồ so sánh
             ranking_df = pd.DataFrame(rankings)
@@ -352,8 +331,8 @@ elif st.session_state.page == "analyze":
             st.error("Lỗi: Không thể tải mô hình ML!")
             st.stop()
         
-        # Lấy xếp hạng tất cả ngành (sử dụng interest cố định 5.0)
-        rankings = get_all_majors_ranking(user_scores, 5.0)
+        # Lấy xếp hạng tất cả ngành
+        rankings = get_all_majors_ranking(user_scores)
         
         # Sắp xếp theo score giảm dần và lấy top 4
         top_4 = sorted(rankings, key=lambda x: x['score'], reverse=True)[:4]

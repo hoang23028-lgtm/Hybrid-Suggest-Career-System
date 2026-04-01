@@ -54,7 +54,7 @@ INPUT: Điểm 9 môn (0-10)
 │    Range: [0.5, 10]                  │
 └─────────────────────────────────────┘
                   ↓
-         ML Score + Interest (5.0)
+         ML Score
                   ↓
 ┌─────────────────────────────────────┐
 │   FUZZY LOGIC BRANCH                │
@@ -133,9 +133,8 @@ Nhấn nút **"Phân Tích"** hoặc **"Xem tất cả ngành"**
 
 System sẽ:
 1. Đưa dữ liệu qua Random Forest → **ML Score** (0-10)
-2. Cộng với Interest Score (mặc định = 5.0)
-3. Chuyển vào Fuzzy Logic System
-4. Tính **Recommendation Score** (0% - 100%)
+2. Chuyển vào Fuzzy Logic System
+3. Tính **Recommendation Score** (0% - 100%)
 
 ### Bước 3: Xem & Phân Tích Kết Quả
 
@@ -199,9 +198,6 @@ Membership Functions: Gaussian (smooth bell curves)
 │   ├── Low:    μ = 1.5, σ = 1.5
 │   ├── Medium: μ = 5.0, σ = 2.0
 │   └── High:   μ = 8.5, σ = 1.5
-│
-├── Input 2: Interest (0-10, fixed at 5.0)
-│   └── [Same as ML Score]
 │
 └── Output: Recommendation (0-100%)
     ├── Very Low:   μ = 15, σ = 12
@@ -375,10 +371,10 @@ Anh: 6     |  Lịch: 5   |  Địa: 5
 
 **Output:**
 ```
-IT - Công Nghệ Thông Tin     | 74.23% (ML: 8.5)
-Kỹ Thuật - Xây Dựng          | 68.45% (ML: 7.8)
-Y Khoa - Sức Khỏe            | 62.89% (ML: 6.9)
-Nông-Lâm-Ngư                | 51.23% (ML: 4.2)
+IT - Công Nghệ Thông Tin     | 74.23%
+Kỹ Thuật - Xây Dựng          | 68.45%
+Y Khoa - Sức Khỏe            | 62.89%
+Nông-Lâm-Ngư                | 51.23%
 ```
 
 ### Scenario 2: Học sinh Văn chương tốt
@@ -392,10 +388,10 @@ Anh: 8.5   |  Lịch: 8   |  Địa: 7
 
 **Output:**
 ```
-Sư Phạm - Giáo Dục           | 71.56% (ML: 8.1)
-Luật Pháp                    | 68.34% (ML: 7.5)
-Kinh Tế - Kinh Doanh         | 55.67% (ML: 5.2)
-Du Lịch - Khách Sạn         | 48.90% (ML: 3.8)
+Sư Phạm - Giáo Dục           | 71.56%
+Luật Pháp                    | 68.34%
+Kinh Tế - Kinh Doanh         | 55.67%
+Du Lịch - Khách Sạn         | 48.90%
 ```
 
 ---
@@ -461,7 +457,7 @@ Du Lịch - Khách Sạn         | 48.90% (ML: 3.8)
 
 ### Fuzzy Logic: Mamdani Inference
 ```
-- Inputs: ml_input (0-10), interest (0-10)
+- Inputs: ml_input (0-10)
 - Output: advice (0-100)
 - Rules: 9 quy tắc kết hợp
 - Membership functions: Triangular (trimf)

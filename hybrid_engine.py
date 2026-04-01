@@ -45,53 +45,42 @@ def create_fuzzy_system():
     Tạo hệ thống Fuzzy Logic tối ưu với Gaussian membership functions cho output liên tục.
     """
     # Định nghĩa các biến input
-    ml_input = ctrl.Antecedent(np.arange(0, 11, 1), 'ml_input')
-    interest = ctrl.Antecedent(np.arange(0, 11, 1), 'interest')
+    ml_input = ctrl.Antecedent(np.arange(0, 11, 0.5), 'ml_input')
     
     # Định nghĩa biến output với resolution cao hơn
-    advice = ctrl.Consequent(np.arange(0, 101, 0.1), 'advice')
+    advice = ctrl.Consequent(np.arange(0, 101, 1), 'advice')
     
     # === GAUSSIAN MEMBERSHIP FUNCTIONS - LÀM OUTPUT LIÊN TỤC ===
     
     # ML Input (0-10): Khả năng từ ML
-    ml_input['low'] = fuzz.gaussmf(ml_input.universe, 1.5, 1.5)
-    ml_input['medium'] = fuzz.gaussmf(ml_input.universe, 5, 2)
-    ml_input['high'] = fuzz.gaussmf(ml_input.universe, 8.5, 1.5)
-    
-    # Interest (0-10): Mức độ quan tâm
-    interest['low'] = fuzz.gaussmf(interest.universe, 1.5, 1.5)
-    interest['medium'] = fuzz.gaussmf(interest.universe, 5, 2)
-    interest['high'] = fuzz.gaussmf(interest.universe, 8.5, 1.5)
+    ml_input['poor'] = fuzz.gaussmf(ml_input.universe, 0, 1.5)
+    ml_input['average'] = fuzz.gaussmf(ml_input.universe, 5, 1.5)
+    ml_input['good'] = fuzz.gaussmf(ml_input.universe, 7.5, 1.5)
+    ml_input['excellent'] = fuzz.gaussmf(ml_input.universe, 10, 1.5)
     
     # Output (0-100%): Độ khuyến nghị - GAUSSIAN FI = liên tục, mịn
-    advice['very_low'] = fuzz.gaussmf(advice.universe, 15, 12)
-    advice['low'] = fuzz.gaussmf(advice.universe, 35, 12)
-    advice['medium'] = fuzz.gaussmf(advice.universe, 50, 15)
-    advice['high'] = fuzz.gaussmf(advice.universe, 70, 12)
-    advice['very_high'] = fuzz.gaussmf(advice.universe, 85, 12)
+    advice['very_low'] = fuzz.gaussmf(advice.universe, 15, 10)
+    advice['low'] = fuzz.gaussmf(advice.universe, 40, 10)
+    advice['medium'] = fuzz.gaussmf(advice.universe, 60, 10)
+    advice['high'] = fuzz.gaussmf(advice.universe, 80, 10)
+    advice['very_high'] = fuzz.gaussmf(advice.universe, 95, 10)
     
     # === CÁC QUY TẮC FUZZY ===
     rules = [
-        ctrl.Rule(ml_input['high'] & interest['high'], advice['very_high']),
-        ctrl.Rule(ml_input['high'] & interest['medium'], advice['high']),
-        ctrl.Rule(ml_input['high'] & interest['low'], advice['medium']),
-        ctrl.Rule(ml_input['medium'] & interest['high'], advice['high']),
-        ctrl.Rule(ml_input['medium'] & interest['medium'], advice['medium']),
-        ctrl.Rule(ml_input['medium'] & interest['low'], advice['low']),
-        ctrl.Rule(ml_input['low'] & interest['high'], advice['medium']),
-        ctrl.Rule(ml_input['low'] & interest['medium'], advice['low']),
-        ctrl.Rule(ml_input['low'] & interest['low'], advice['very_low']),
+        ctrl.Rule(ml_input['poor'], advice['very_low']),
+        ctrl.Rule(ml_input['average'], advice['medium']),
+        ctrl.Rule(ml_input['good'], advice['high']),
+        ctrl.Rule(ml_input['excellent'], advice['very_high'])
     ]
     
-    return ctrl.ControlSystem(rules), ml_input, interest, advice
+    return ctrl.ControlSystem(rules), ml_input, advice
 
-def get_hybrid_advice(user_scores, interest_score, major_index=0):
+def get_hybrid_advice(user_scores, major_index=0):
     """
     Nhận gợi ý lai (kết hợp ML + Fuzzy Logic).
     
     Args:
         user_scores (list): Điểm số 9 môn [Toán, Lý, Hóa, Sinh, Văn, Anh, Lịch sử, Địa lý, Tin]
-        interest_score (float): Mức độ yêu thích ngành (0-10)
         major_index (int): Index ngành (0-7)
     
     Returns:
@@ -102,10 +91,6 @@ def get_hybrid_advice(user_scores, interest_score, major_index=0):
         if not isinstance(user_scores, (list, tuple)) or len(user_scores) != 9:
             logger.error(f" Lỗi: user_scores phải là danh sách 9 điểm! Nhận được {len(user_scores)}")
             return None, "Lỗi: Dữ liệu đầu vào không hợp lệ", 0, ""
-        
-        if not (0 <= interest_score <= 10):
-            logger.error(" Lỗi: interest_score phải nằm trong khoảng [0, 10]")
-            return None, "Lỗi: Điểm sở thích không hợp lệ", 0, ""
         
         if not (0 <= major_index < len(NGANH_HOC_MAP)):
             logger.error(f" Lỗi: major_index phải nằm trong [0, {len(NGANH_HOC_MAP)-1}]")
@@ -130,14 +115,13 @@ def get_hybrid_advice(user_scores, interest_score, major_index=0):
         ml_score = min(10, max(0.5, ml_score))  # Clip to 0.5-10 để không quá thấp
         
         # 2. FUZZY LOGIC INFERENCE
-        control_system, ml_input, interest, advice = create_fuzzy_system()
+        control_system, ml_input, advice = create_fuzzy_system()
         sim = ctrl.ControlSystemSimulation(control_system)
         
         # Thêm smooth noise vào input để output liên tục hơn
         # Điều này tạo ra variation nhỏ trong fuzzy inference
         input_noise = np.random.randn() * 0.2  # Thêm Gaussian noise
         sim.input['ml_input'] = max(0, min(10, ml_score + input_noise))
-        sim.input['interest'] = max(0, min(10, interest_score + input_noise))
         sim.compute()
         
         final_score = sim.output['advice']
@@ -149,8 +133,6 @@ def get_hybrid_advice(user_scores, interest_score, major_index=0):
         explanation += f" ML dự đoán:\n"
         explanation += f"   - Khả năng tương thích: {ml_score:.1f}/10\n\n"
         
-        explanation += f" Sở thích cá nhân: {interest_score:.1f}/10\n\n"
-        
         explanation += f" Kết quả cuối cùng: {final_score:.1f}%\n\n"
         
         # Nhận xét chi tiết
@@ -160,11 +142,6 @@ def get_hybrid_advice(user_scores, interest_score, major_index=0):
             explanation += " Khá phù hợp. Bạn có thể xem xét ngành này kèm các lựa chọn khác."
         else:
             explanation += " Không quá phù hợp. Bạn nên xem xét các ngành khác có tiềm năng cao hơn."
-        
-        if interest_score > 7:
-            explanation += "\n\n Sở thích cao của bạn giúp tăng cộng hiệu suất học tập đáng kể!"
-        elif interest_score < 4:
-            explanation += "\n\n Mức độ sở thích thấp có thể ảnh hưởng đến hiệu suất học tập."
         
         logger.info(f"✓ Dự đoán hoàn thành: {major_name} | Score: {final_score:.2f}%")
         
@@ -176,13 +153,12 @@ def get_hybrid_advice(user_scores, interest_score, major_index=0):
         logger.error(traceback.format_exc())
         return None, f"Lỗi: {str(e)}", 0, ""
 
-def get_all_majors_ranking(user_scores, interest_score):
+def get_all_majors_ranking(user_scores):
     """
     Nhận xếp hạng tất cả các ngành.
     
     Args:
         user_scores (list): Điểm số 7 môn
-        interest_score (float): Mức độ yêu thích (sử dụng chung cho tất cả ngành)
     
     Returns:
         list: Danh sách [{'major': tên, 'score': điểm, ...}, ...]
@@ -190,7 +166,7 @@ def get_all_majors_ranking(user_scores, interest_score):
     results = []
     for major_idx in range(len(NGANH_HOC_MAP)):
         score, explanation, ml_score, major_name = get_hybrid_advice(
-            user_scores, interest_score, major_idx
+            user_scores, major_idx
         )
         if score is not None:
             results.append({
