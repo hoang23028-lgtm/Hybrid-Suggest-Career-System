@@ -8,12 +8,12 @@
 
 | Tính Năng | Chi Tiết |
 |-----------|---------|
-| **Machine Learning** | Random Forest với 100 cây quyết định, độ chính xác 82% |
+| **Machine Learning** | Random Forest với 100 cây quyết định, độ chính xác ~88% |
 | **Fuzzy Logic** | 9 quy tắc mờ với hàm đo Gaussian, xử lý quyết định không chắc chắn |
 | **Hệ Thống Lai** | Kết hợp ML score + Fuzzy inference → Gợi ý chính xác nhất |
 | **Giao Diện Tương Tác** | Streamlit 3 tab: Kết quả, Phân tích chi tiết, So sánh ngành |
 | **Hình Ảnh Hóa Dữ Liệu** | Radar chart, Biểu đồ batplot, Bảng xếp hạng |
-| **10,000 Mẫu Dữ Liệu** | Tập dữ liệu lớn với 8 ngành chính |
+| **50,000 Mẫu Dữ Liệu** | Tập dữ liệu lớn với 8 ngành chính |
 | **Phân Tích Chi Tiết** | Log từng bước dự đoán, giải thích kết quả |
 
 ---
@@ -26,11 +26,11 @@ e:/KBS/
 ├── app.py                    ← Giao diện Streamlit (Trang chủ + Phân tích)
 ├── hybrid_engine.py          ← Lõi AI: ML + Fuzzy Logic (Gaussian functions)
 ├── train_model.py            ← Huấn luyện Random Forest
-├── create_data.py            ← Tạo 10,000 mẫu dữ liệu tổng hợp
-├── config.py                ← Cấu hình: 8 ngành, 9 môn, 10K samples
+├── create_data.py            ← Tạo 50,000 mẫu dữ liệu tổng hợp
+├── config.py                ← Cấu hình: 8 ngành, 9 môn, 50K samples
 ├── requirements.txt           ← Thư viện Python
-├── data_tuyensinh.csv        ← Dataset 10K rows × 10 cols (auto-gen)
-├── rf_model.pkl              ← Mô hình ML đã train (13.6 MB, auto-gen)
+├── data_tuyensinh.csv        ← Dataset 50K rows × 10 cols (auto-gen, ~8MB)
+├── rf_model.pkl              ← Mô hình ML đã train (~53 MB, auto-gen)
 └── README.md                 ← Hướng dẫn này
 ```
 
@@ -46,7 +46,7 @@ INPUT: Điểm 9 môn (0-10)
 │  ┌──────────────────────────────┐   │
 │  │ Random Forest Classifier     │   │
 │  │ (100 trees, depth=15)        │   │
-│  │ Accuracy: 82.35%             │   │
+│  │ Accuracy: 88.60%             │   │
 │  └──────────────────────────────┘   │
 │           ↓                          │
 │    Raw Probability (0-1) → ML Score  │
@@ -92,7 +92,7 @@ cd e:\KBS
 # Cài đặt thư viện
 pip install -r requirements.txt
 
-# Tạo dữ liệu (10,000 mẫu)
+# Tạo dữ liệu (50,000 mẫu)
 python create_data.py
 
 # Huấn luyện mô hình (2-3 phút)
@@ -184,10 +184,10 @@ Model: Random Forest Classifier
 └── Cross Validation: 5-fold, Acc ≈ 83%
 
 Performance:
-├── Test Accuracy: 82.35% 
-├── Precision: 0.82
-├── Recall: 0.82
-└── F1-Score: 0.82
+├── Test Accuracy: 88.60% 
+├── Precision: 0.89 (weighted)
+├── Recall: 0.89 (weighted)
+└── F1-Score: 0.88 (weighted)
 ```
 
 ### Fuzzy Logic
@@ -228,22 +228,22 @@ Tác dụng:
 ## Dữ Liệu Huấn Luyện
 
 ```
-Dataset: 10,000 mẫu tổng hợp
+Dataset: 50,000 mẫu tổng hợp
 ├── Features: 9 (Toán, Lý, Hóa, Sinh, Văn, Anh, Lịch, Địa, Tin)
 ├── Target: 8 ngành chính 
 ├── Format: CSV (data_tuyensinh.csv)
-├── Size: ~2.5 MB
+├── Size: ~8.3 MB
 └── Generation: Thuật toán "nhóm điểm" thông minh
 
 Phân bố Dữ Liệu:
-├── IT: 19.9% (1990 mẫu)
-├── Y Khoa: 29.3% (2930 mẫu)
-├── Luật Pháp: 16.5% (1650 mẫu)
-├── Kỹ Thuật: 12.0% (1200 mẫu)
-├── Kinh Tế: 10.5% (1050 mẫu)
-├── Sư Phạm: 6.5% (650 mẫu)
-├── Nông-Lâm-Ngư: 3.8% (380 mẫu)
-└── Du Lịch: 1.5% (150 mẫu)
+├── IT: 19.7% (9825 mẫu)
+├── Y Khoa: 29.3% (14660 mẫu)
+├── Luật Pháp: 16.0% (7980 mẫu)
+├── Kỹ Thuật: 10.0% (5011 mẫu)
+├── Sư Phạm: 8.7% (4360 mẫu)
+├── Nông-Lâm-Ngư: 7.9% (3961 mẫu)
+├── Du Lịch: 4.6% (2299 mẫu)
+└── Kinh Tế: 3.8% (1904 mẫu)
 ```
 
 ---
@@ -266,25 +266,25 @@ networkx           3.3     # Network analysis (optional)
 
 ```bash
 $ python create_data.py
-✓ Tạo 10,000 mẫu dữ liệu
+✓ Tạo 50,000 mẫu dữ liệu
 ✓ Phân bố: 8 ngành chính
-✓ Output: data_tuyensinh.csv (2.5 MB)
+✓ Output: data_tuyensinh.csv (~8.3 MB)
 ```
 
-**Thời gian:** ~2 giây
+**Thời gian:** ~10 giây
 
 ### 2. Huấn Luyện Mô Hình
 
 ```bash
 $ python train_model.py
-✓ Load dữ liệu: 10,000 mẫu
-✓ Split: 8000 train / 2000 test
+✓ Load dữ liệu: 50,000 mẫu
+✓ Split: 40000 train / 10000 test
 ✓ Train RF: 100 trees
-✓ Evaluate: 82.35% accuracy
-✓ Save: rf_model.pkl (13.6 MB)
+✓ Evaluate: 88.60% accuracy
+✓ Save: rf_model.pkl (~53 MB)
 ```
 
-**Thời gian:** ~3 phút
+**Thời gian:** ~15 giây
 
 ### 3. Chạy Ứng Dụng
 
@@ -423,7 +423,7 @@ Du Lịch - Khách Sạn         | 48.90%
 - [x] ML Score power scaling (v1.0 linear)
 - [x] Input noise (continuous output)
 - [x] Fine-tuned parameters
-- [x] **Accuracy: 82.35%** 
+- [x] **Accuracy: ~88%** 
 
 ### v1.2 - Planned
 - [ ] Thêm ngành học mới
@@ -431,164 +431,5 @@ Du Lịch - Khách Sạn         | 48.90%
 - [ ] API endpoint
 - [ ] Database integration
 - [ ] Export reports (PDF)
-
----
-
----
-
-
-
-
-
-
---
-## 📈 Kỹ Thuật  Dùng
-
-### Machine Learning: Random Forest
-```
-- Số cây: 100
-- Max depth: 15 (ngăn overfitting)
-- Min samples split: 10
-- Min samples leaf: 5
-- Cross-validation: 5-fold
-- Số feature: 9 (Toán, Lý, Hóa, Sinh, Văn, Anh, Lịch sử, Địa lý, Tin)
-- Số class: 8 ngành
-```
-
-### Fuzzy Logic: Mamdani Inference
-```
-- Inputs: ml_input (0-10)
-- Output: advice (0-100)
-- Rules: 9 quy tắc kết hợp
-- Membership functions: Triangular (trimf)
-```
-
-### Hybrid Strategy
-1. **ML** dự đoán khả năng: 0-10
-2. **Fuzzy** kết hợp với sở thích: 0-100%
-3. **Giải thích** chi tiết bằng luật
-
-## Kết Quả Mô Hình Mẫu
-
-```
-HOÀN THÀNH: Mô hình đã sẵn sàng!
-===================================================
-
-Testing Accuracy: 0.8400 (84.00%)
-Cross-Validation Accuracy: 0.7675 +/- 0.0232
-
-Top Features:
-- toan: 0.1472
-- sinh: 0.1470
-- tin_hoc: 0.1337
-- anh: 0.1099
-- hoa: 0.1005
-
-Phân bố dữ liệu (1000 mẫu):
-- IT: 174 (17.4%)
-- Y khoa: 153 (15.3%)
-- Sư phạm: 256 (25.6%)
-- Kỹ thuật: 108 (10.8%)
-- Luật pháp: 121 (12.1%)
-- Nông - Lâm - Ngư: 90 (9.0%)
-- Kinh tế: 74 (7.4%)
-- Du lịch: 24 (2.4%)
-```
-
-## Luồng Hoạt Động
-
-```
-┌─────────────────────────────────────────────────────┐
-│ 1. create_data.py (Tạo 1000 mẫu dữ liệu)            │
-└────────────────┬────────────────────────────────────┘
-                 ↓
-┌─────────────────────────────────────────────────────┐
-│ 2. train_model.py (Huấn luyện Random Forest)        │
-│    - Split data 80/20                               │
-│    - Cross-validation                               │
-│    - Lưu rf_model.pkl                               │
-└────────────────┬────────────────────────────────────┘
-                 ↓
-┌─────────────────────────────────────────────────────┐
-│ 3. app.py (Streamlit Web UI)                        │
-│    ↓                                                 │
-│ 4. hybrid_engine.py (AI Logic)                      │
-│    - Load model (cache)                             │
-│    - ML prediction                                  │
-│    - Fuzzy inference                                │
-│    - Ranking tất cả ngành                           │
-└────────────────┬────────────────────────────────────┘
-                 ↓
-┌─────────────────────────────────────────────────────┐
-│ 5. Kết Quả: Gợi ý ngành + Biểu đồ                  │
-└─────────────────────────────────────────────────────┘
-```
-
-## Cách Mô Hình Được Lưu Trữ
-
-- **Format**: Pickle (.pkl)
-- **File**: `rf_model.pkl`
-- **Kích thước**: ~50-100 KB
-- **Tối ưu**: Chỉ load một lần, cache trong memory
-
-## Troubleshooting
-
-### Lỗi: "Không tìm thấy file data_tuyensinh.csv"
-```bash
-python create_data.py
-```
-
-### Lỗi: "Không tìm thấy file rf_model.pkl"
-```bash
-python train_model.py
-```
-
-### Lỗi: "ModuleNotFoundError"
-```bash
-pip install -r requirements.txt
-```
-
-### Ứng dụng chạy chậm
-- Capping được thực hiện tự động
-- Nếu vẫn chậm, restart Streamlit: `Ctrl+C` và chạy lại
-
-## Logs
-
-Tất cả logs được ghi vào console và file `app.log` (nếu configured).
-
-```
-2024-03-30 10:15:32,123 - __main__ - INFO - 📖 Đang đọc dữ liệu...
-2024-03-30 10:15:33,456 - __main__ - INFO - ✓ Dữ liệu đã được load thành công!
-```
-
-## Customization
-
-Chỉnh sửa các tham số trong `config.py`:
-
-```python
-# Đổi số lượng cây Random Forest
-RF_PARAMS['n_estimators'] = 200
-
-# Đổi số fold cross-validation
-CV_FOLDS = 10
-
-# Thêm ngành mới
-NGANH_HOC_MAP[4] = "Ngành mới"
-```
-
-## Thư Viện Sử Dụng
-
-| Thư viện | Hàm năng | Version |
-|---------|---------|---------|
-| streamlit | Web UI | ≥1.28.0 |
-| scikit-learn | Machine Learning | ≥1.3.0 |
-| pandas | Data processing | ≥2.0.0 |
-| numpy | Numerical computing | ≥1.24.0 |
-| scikit-fuzzy | Fuzzy Logic | ≥0.4.2 |
-| plotly | Interactive charts | ≥5.17.0 |
-| networkx | Graph analysis | ≥3.1 |
-
-
-
 
 ---
