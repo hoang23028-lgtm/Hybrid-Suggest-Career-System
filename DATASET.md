@@ -2,13 +2,13 @@
 
 ## 1. Tổng Quan
 
-**Tên file:** `data_tuyensinh.csv`  
-**Kích thước:** 8.3 MB  
-**Số lượng mẫu:** 50,000 hàng  
-**Số cột:** 10 cột (9 features + 1 label)  
-**Loại dữ liệu:** Dữ liệu tổng hợp ngẫu nhiên  
+Tên file: `data_tuyensinh_balanced.csv`  
+Kích thước: 18.48 MB  
+Số lượng mẫu: 117,280 hàng  
+Số cột: 10 cột (9 features + 1 label)  
+Loại dữ liệu: Dữ liệu tổng hợp ngẫu nhiên  
 
-**Mục đích:** Huấn luyện mô hình Machine Learning (Random Forest) để gợi ý ngành học phù hợp dựa trên điểm số 9 môn.
+Mục đích: Huấn luyện mô hình Machine Learning (Random Forest) để gợi ý ngành học phù hợp dựa trên điểm số 9 môn.
 
 ---
 
@@ -32,7 +32,7 @@
 
 | ID | Tên Cột | Tên Hiển thị | Mô Tả | Emoji |
 |----|---------|-------------|-------|-------|
-| - | `nganh_hoc` | Ngành Học | ID ngành (0-7) | 🎓 |
+| - | `nganh_hoc` | Ngành Học | ID ngành (0-7) |  |
 
 ---
 
@@ -88,13 +88,13 @@ python create_data.py
 ```
 
 **Output:**
-- `data_tuyensinh.csv` - File CSV với 50,000 mẫu
+- `data_tuyensinh_balanced.csv` - File CSV với 117,280 mẫu
 - Log thống kê phân bố các ngành
 
 ### 5.2 Quy Trình Tạo
 
 ```python
-1. Tạo 50,000 hàng dữ liệu ngẫu nhiên:
+1. Tạo 117,280 hàng dữ liệu ngẫu nhiên (cân bằng):
    - Mỗi feature được khởi tạo từ Uniform(3, 10)
    - Sử dụng random seed = 42 (tái lập được)
 
@@ -113,7 +113,7 @@ python create_data.py
 
 ### 5.3 Phân Bố Dữ Liệu
 
-Ví dụ từ 50,000 mẫu (điển hình):
+Ví dụ từ 117,280 mẫu (điển hình):
 
 ```
 IT - Công nghệ thông tin:        10.2% (5,100 mẫu)
@@ -124,8 +124,8 @@ Nông - Lâm - Ngư:                10.1% (5,050 mẫu)
 Sư phạm - Giáo dục:              12.0% (6,000 mẫu)
 Luật pháp:                        11.2% (5,600 mẫu)
 Du lịch - Khách sạn:             12.7% (6,350 mẫu)
-─────────────────────────────────────────
-TỔNG:                           100.0% (50,000 mẫu)
+
+TỔNG:                           100.0% (117,280 mẫu)
 ```
 
 ---
@@ -134,8 +134,8 @@ TỔNG:                           100.0% (50,000 mẫu)
 
 ```python
 # Đường dẫn và kích thước
-DATA_PATH = 'data_tuyensinh.csv'
-NUM_SAMPLES = 50000
+DATA_PATH = 'data_tuyensinh_balanced.csv'
+NUM_SAMPLES = 117280
 
 # Tên các features
 FEATURE_NAMES = ['toan', 'ly', 'hoa', 'sinh', 'van', 'anh', 'lich_su', 'dia_ly', 'tin_hoc']
@@ -170,8 +170,8 @@ import pandas as pd
 data = pd.read_csv(DATA_PATH)
 
 # Chia features và label
-X = data[FEATURE_NAMES]  # 50,000 × 9
-y = data['nganh_hoc']     # 50,000
+X = data[FEATURE_NAMES]  # 117,280 × 9
+y = data['nganh_hoc']     # 117,280
 
 # Huấn luyện Random Forest
 from sklearn.ensemble import RandomForestClassifier
@@ -228,7 +228,7 @@ Tin học ← IT, Kỹ thuật
 - Dữ liệu cân bằng tương đối giữa 8 ngành (~12% mỗi ngành)
 - Được tạo lặp lại (reproducible) nhờ seed = 42
 - Tuân theo logic giáo dục (quy luật assign_major hợp lý)
-- Kích thước đủ lớn (50K mẫu) cho ML training
+- Kích thước đủ lớn (117,280 mẫu) cho ML training
 
 ### Hạn Chế
 

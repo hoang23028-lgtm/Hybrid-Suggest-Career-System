@@ -2,7 +2,7 @@
 
 ## rf_model.pkl (NOT in GitHub)
 
-**File Size:** 131.50 MB (exceeds GitHub's 100 MB limit)
+**File Size:** 95.54 MB
 
 **Location:** This file is generated locally on your machine and NOT tracked in this repository.
 
@@ -23,7 +23,7 @@ This will train a new Random Forest model using the balanced dataset.
 
 - **Type:** Random Forest Classifier (100 trees)
 - **Data:** 117,280 balanced samples (12.5% per major)
-- **Accuracy:** 69.43% (on test set)
+- **Accuracy:** 90.83% (on test set)
 - **Features:** 9 academic subjects (Toán, Lý, Hóa, Sinh, Văn, Anh, Lịch sử, Địa lý, Tin học)
 - **Classes:** 8 majors (IT, Kinh tế, Y khoa, Kỹ thuật, Nông-Lâm, Sư phạm, Luật, Du lịch)
 
