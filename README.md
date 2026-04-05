@@ -23,15 +23,37 @@ Giúp học sinh Việt Nam tìm ngành học phù hợp một cách khoa học 
 ```
 e:/KBS/
 
- app.py                    ← Giao diện Streamlit (Trang chủ + Phân tích)
- hybrid_engine.py          ← Lõi AI: ML + Fuzzy Logic (Gaussian functions)
- train_model.py            ← Huấn luyện Random Forest
- create_data.py            ← Tạo 117,280 mẫu dữ liệu tổng hợp
- config.py                ← Cấu hình: 8 ngành, 9 môn, 117K samples
- requirements.txt           ← Thư viện Python
- data_tuyensinh_balanced.csv ← Dataset 117,280 rows × 10 cols (auto-gen, ~18.5MB)
- rf_model.pkl              ← Mô hình ML đã train (~95.54 MB, auto-gen)
- README.md                 ← Hướng dẫn này
+ CORE MODULES
+  app.py                    ← Giao diện Streamlit (3 tab: Kết quả, Phân tích, So sánh)
+  hybrid_engine.py          ← Lõi AI: Random Forest + Fuzzy Logic (Gaussian)
+  config.py                ← Cấu hình: 8 ngành, 9 môn học, 117K samples
+
+ TRAINING & DATA
+  create_data.py            ← Tạo 117,280 mẫu dữ liệu cân bằng
+  train_model.py            ← Huấn luyện Random Forest (100 trees, max_depth=15)
+  data_tuyensinh_balanced.csv ← Dataset 117,280 rows × 10 cols (~18.48 MB, auto-gen)
+  rf_model.pkl              ← Trained Random Forest model (~95.54 MB, auto-gen)
+
+ ANALYSIS & EVALUATION (v1.2)
+  rule_extraction.py        ← Trích xuất top 50 rules từ ML models
+  evaluate_model.py         ← So sánh ML vs Hybrid performance
+  
+ MONITORING & AUTO-RETRAIN (v1.2)
+  monitoring.py             ← Performance tracking & prediction logging
+  retrain_pipeline.py       ← Tự động phát hiện và retrain model
+
+ DOCUMENTATION
+  README.md                 ← Hướng dẫn chính (file này)
+  QUICK_START.md            ← Khởi động nhanh (5 phút)
+  IMPLEMENTATION_GUIDE.md   ← Hướng dẫn chi tiết kỹ thuật
+  UPDATE_SUMMARY.md         ← Tóm tắt cập nhật v1.2
+  DATASET.md                ← Mô tả dữ liệu và features
+  MODEL_INFO.md             ← Thông tin model và cách dùng
+  Phan_cong.md              ← Phân công công việc trong dự án
+
+ CONFIGURATION
+  requirements.txt          ← Danh sách thư viện Python
+  .gitignore                ← Git ignore file
 ```
 
 ---
