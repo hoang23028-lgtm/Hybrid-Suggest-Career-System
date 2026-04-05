@@ -1,9 +1,14 @@
 Kế Hoạch Phân Chia Công Việc - 2 Người, 3 Tuần
 
-Dự án: Hệ Thống Gợi Ý Ngành Học Hybrid v2.0 (Database + API + Multi-page UI)
+Dự án: Hệ Thống Gợi Ý Ngành Học Hybrid v1.2 (Maintenance & Enhancement)
 Thời gian: 3 tuần (21 ngày)  
 Nhân lực: 2 người  
 Deadline: Ngày 25/04/2026
+
+Cấu trúc hiện tại:
+- app.py (Streamlit UI với 3 tabs)
+- hybrid_engine.py (ML + Fuzzy Logic)
+- config.py, train_model.py, create_data.py
 
 ---
 
@@ -11,180 +16,196 @@ Phân Công
 
 | Vai Trò | Người | Trách Nhiệm |
 |--------|-------|-----------|
-| Hoàng | Backend/ML | Database, API (FastAPI), Deployment |
-| Long | Frontend | Multi-page UI (Streamlit), Responsive Design |
+| Hoàng | Backend/ML | ML optimization, Performance, Features |
+| Long | Frontend | UI/UX, Responsive design, Visualization |
 
 ---
 
-TUẦN 1: Chuẩn Bị & Thiết lập Database
+TUẦN 1: Code Optimization & Bug Fixes
 
 ### Hoàng (Backend/ML)
-- [ ] **W1.A1** - Database Design & Implementation
-  - [ ] Thiết kế schema SQLite (3 bảng: Profile, History, Stats)
-  - [ ] Tạo `database.py` với CRUD operations
-  - [ ] Thiết lập migrations
-  - [ ] Thời gian: 3 ngày
-  - [ ] Output: `database.py`, SQLite schema, sample queries
-  - [ ] Bảng cần: students (profile), predictions (history), recommendations (stats)
+- [ ] **W1.A1** - Code Review & Refactoring
+  - [ ] Review hybrid_engine.py logic
+  - [ ] Add type hints & docstrings
+  - [ ] Optimize imports
+  - [ ] Thời gian: 1.5 ngày
+  - [ ] Output: Clean code, better documentation
   
-- [ ] W1.A2 - API Scaffold & Core Setup
-  - [ ] Khởi tạo FastAPI project
-  - [ ] Setup project structure: routes, models, schemas
-  - [ ] Tầng xác thực cơ bản
+- [ ] W1.A2 - Performance Testing
+  - [ ] Benchmark hybrid_engine performance
+  - [ ] Test with different input ranges
+  - [ ] Check memory usage
+  - [ ] Thời gian: 1.5 ngày
+  - [ ] Output: Performance report, optimizations
+  
+- [ ] W1.A3 - Feature Enhancement
+  - [ ] Add export predictions as JSON/CSV
+  - [ ] Add confidence scores
+  - [ ] Add sample test cases
   - [ ] Thời gian: 2 ngày
-  - [ ] Output: `api.py`, `models.py`, `schemas.py`
+  - [ ] Output: New features in hybrid_engine
 
 ### Long (Frontend)
-- [ ] W1.B1 - Code Review & Type Hints
-  - [ ] Review `app.py` và hybrid_engine logic
-  - [ ] Thêm type hints cho main functions
-  - [ ] Tối ưu imports
+- [ ] W1.B1 - UI/UX Review
+  - [ ] Review app.py structure
+  - [ ] Check CSS styling
+  - [ ] Test on different screen sizes
   - [ ] Thời gian: 1 ngày
-  - [ ] Output: `app.py` with type hints
+  - [ ] Output: UX improvement list
   
-- [ ] W1.B2 - Multi-page UI Scaffold
-  - [ ] Tách UI thành 4 trang: Home, Analysis, History, Profile
-  - [ ] Setup Streamlit multipage navigation
-  - [ ] Tạo layout base và responsive CSS
+- [ ] W1.B2 - Code Cleanup & Type Hints
+  - [ ] Add type hints to app.py functions
+  - [ ] Optimize layout components
+  - [ ] Clean up CSS
   - [ ] Thời gian: 2 ngày
-  - [ ] Output: pages/ folder với 4 files
+  - [ ] Output: Clean, documented code
+  
+- [ ] W1.B3 - Responsive Design
+  - [ ] Mobile-first CSS
+  - [ ] Responsive grid layout
+  - [ ] Test on tablet/mobile
+  - [ ] Thời gian: 1.5 ngày
+  - [ ] Output: Mobile-friendly UI
 
-### Điểm Đồng bộ (Cuối tuần 1 - Ngày 12/4)
-- [ ] Database schema finalized & tested
-- [ ] API project initialized & routes setup
-- [ ] Multi-page structure ready
-- [ ] All code committed & PR reviewed
+### Checkpoint (Cuối tuần 1 - Ngày 12/4)
+- [ ] All code refactored & type-hinted
+- [ ] Performance benchmarks done
+- [ ] UI responsive on all devices
+- [ ] Bug fixes completed
 
 ---
 
-TUẦN 2: Phát Triển API & Multi-page UI
+TUẦN 2: Features & Visualization
 
 ### Hoàng (Backend/ML)
-- [ ] W2.A1 - API Endpoints Implementation
-  - [ ] POST /predict - Gợi ý sử dụng hybrid_engine
-  - [ ] POST /profile - Lưu hồ sơ học sinh
-  - [ ] GET /history - Lấy lịch sử dự đoán
-  - [ ] GET /stats - Thống kê truy cập
-  - [ ] Thời gian: 3 ngày
-  - [ ] Output: 4 endpoints + Swagger docs
-  - [ ] Mỗi endpoint kết nối với database & hybrid_engine
+- [ ] W2.A1 - Advanced Features
+  - [ ] Multi-input predictions (save temporary results)
+  - [ ] Add comparison mode (2 profiles)
+  - [ ] Add statistics about recommendations
+  - [ ] Thời gian: 2.5 ngày
+  - [ ] Output: New prediction features
   
-- [ ] W2.A2 - API Testing & Documentation
-  - [ ] Unit tests cho mỗi endpoint
-  - [ ] Integration tests
-  - [ ] Tài liệu API (Swagger OpenAPI)
-  - [ ] Thời gian: 2 ngày
-  - [ ] Output: test files, `/api/docs`
+- [ ] W2.A2 - Testing & QA
+  - [ ] Unit tests for hybrid_engine
+  - [ ] Edge case testing
+  - [ ] Validation tests
+  - [ ] Thời gian: 1.5 ngày
+  - [ ] Output: test_hybrid_engine.py
 
 ### Long (Frontend)
-- [ ] W2.B1 - Multi-page Pages Implementation
-  - [ ] pages/home.py - Trang chính (dự đoán)
-  - [ ] pages/analysis.py - Phân tích chi tiết
-  - [ ] pages/history.py - Lịch sử dự đoán (gọi API GET /history)
-  - [ ] pages/profile.py - Hồ sơ học sinh (gọi API POST /profile)
-  - [ ] Thời gian: 3 ngày
-  - [ ] Output: 4 trang UI hoàn chỉnh
-
-- [ ] W2.B2 - API Integration & Responsive UI
-  - [ ] Gọi API endpoints từ mỗi trang
-  - [ ] Xử lý loading/error states
-  - [ ] CSS responsive cho mobile
+- [ ] W2.B1 - Advanced Visualizations
+  - [ ] Improve Radar Chart (colors, interactivity)
+  - [ ] Add heatmap for score distribution
+  - [ ] Add success rate visualization
   - [ ] Thời gian: 2 ngày
-  - [ ] Output: All pages connected to API
+  - [ ] Output: Better charts with Plotly
+  
+- [ ] W2.B2 - UI Enhancements
+  - [ ] Add dark mode toggle
+  - [ ] Improve color scheme
+  - [ ] Add animations/transitions
+  - [ ] Better error messages
+  - [ ] Thời gian: 2 ngày
+  - [ ] Output: Enhanced UI theme
 
-### Điểm Đồng bộ (Cuối tuần 2 - Ngày 19/4)
-- [ ] API endpoints fully functional
-- [ ] Multi-page UI connected to API
-- [ ] Database storing predictions correctly
-- [ ] End-to-end workflow tested
+### Checkpoint (Cuối tuần 2 - Ngày 19/4)
+- [ ] New features working
+- [ ] Advanced visualizations complete
+- [ ] Unit tests passing
+- [ ] Dark mode implemented
 
 ---
 
 TUẦN 3: Testing, Documentation & Deployment
 
-### Kiểm tra (Song song)
-
-#### Hoàng - Backend Testing
-- [ ] W3.A1 - Unit & Integration Tests
-  - [ ] Test các API endpoints
-  - [ ] Test database operations
-  - [ ] Test hybrid_engine integration
-  - [ ] Thời gian: 2 ngày
-  - [ ] Output: `tests/test_api.py`, `tests/test_db.py`
-  - [ ] Target: 70%+ code coverage
-
-- [ ] W3.A2 - Performance & Deployment Prep
-  - [ ] Performance testing
-  - [ ] Environment setup (production)
-  - [ ] Database migrations ready
+### Hoàng (Backend/ML)
+- [ ] W3.A1 - Integration Testing
+  - [ ] Test end-to-end workflows
+  - [ ] Test with real-world data
+  - [ ] Performance under load
+  - [ ] Thời gian: 1.5 ngày
+  - [ ] Output: Comprehensive test results
+  
+- [ ] W3.A2 - Documentation
+  - [ ] Update README.md with v1.2 features
+  - [ ] Create CHANGELOG.md
+  - [ ] Add code examples
   - [ ] Thời gian: 1 ngày
-  - [ ] Output: Deployment checklist
+  - [ ] Output: Complete documentation
 
-#### Long - Frontend Testing
-- [ ] W3.B1 - UI/UX Testing
-  - [ ] Kiểm tra trên Chrome, Firefox, Safari
-  - [ ] Kiểm tra responsive (desktop, tablet, mobile)
-  - [ ] Kiểm tra UX flow
-  - [ ] Thời gian: 1.5 ngày
-  - [ ] Output: Bug report & fixes
-
-- [ ] W3.B2 - Bug Fixes & Polish
-  - [ ] Sửa lỗi giao diện
-  - [ ] Tối ưu hóa hiệu suất
-  - [ ] Polish UI/UX
-  - [ ] Thời gian: 1.5 ngày
-
-### Tài liệu (Cả hai)
-- [ ] **W3.BOTH.1** - Update Documentation
-  - [ ] Cập nhật README.md (v2.0 features)
-  - [ ] Tạo API_DOCUMENTATION.md
-  - [ ] Tạo DEPLOYMENT_GUIDE.md
-  - [ ] Tạo CHANGELOG.md
-  - [ ] Thời gian: 1.5 ngày
-
-- [ ] **W3.BOTH.2** - Deployment Guide
-  - [ ] Setup instructions
-  - [ ] Environment variables
-  - [ ] Database setup
-  - [ ] Thời gian: 0.5 ngày
-
-### Triển khai (Cả hai)
-- [ ] **W3.BOTH.3** - Production Deployment
-  - [ ] Deploy API (Heroku/Railway/Local)
-  - [ ] Deploy Frontend (Streamlit Cloud/Heroku)
-  - [ ] Setup database in production
+### Long (Frontend)
+- [ ] W3.B1 - Cross-browser Testing
+  - [ ] Test Chrome, Firefox, Safari, Edge
+  - [ ] Test on different OS (Windows, Mac, Linux)
+  - [ ] Document compatibility
   - [ ] Thời gian: 1 ngày
+  - [ ] Output: Compatibility report
+  
+- [ ] W3.B2 - UI Polish & Bug Fixes
+  - [ ] Fix remaining UI issues
+  - [ ] Final UX refinements
+  - [ ] Performance optimization
+  - [ ] Thời gian: 1.5 ngày
+  - [ ] Output: Production-ready UI
 
-- [ ] **W3.BOTH.4** - Final Verification
-  - [ ] Kiểm tra production environment
-  - [ ] Monitor logs
-  - [ ] Test production APIs
+### Both (Cả hai)
+- [ ] **W3.BOTH.1** - Final Testing
+  - [ ] Full app workflow testing
+  - [ ] User acceptance testing scenarios
+  - [ ] Performance check
+  - [ ] Thời gian: 1 ngày
+  - [ ] Output: Final test report
+
+- [ ] **W3.BOTH.2** - Deployment
+  - [ ] Final git commit & tag
+  - [ ] Create GitHub release (v1.2)
+  - [ ] Update deployment details
   - [ ] Thời gian: 0.5 ngày
-  - [ ] Output: v2.0 LIVE
+  - [ ] Output: v1.2 RELEASED
 
-### Danh sách Kiểm tra Cuối cùng (Ngày 25/4)
-- [ ] Database connected & working
-- [ ] API endpoints tested (70%+ coverage)
-- [ ] Multi-page UI functional
-- [ ] API & Frontend deployed
-- [ ] Documentation complete
-- [ ] README v2.0 updated
-- [ ] CHANGELOG.md created
-- [ ] GitHub tag & release created
+### Final Checklist (Ngày 25/4)
+- [ ] All code committed & documented
+- [ ] All tests passing
+- [ ] Cross-browser compatible
+- [ ] Dark mode working
+- [ ] Performance optimized
+- [ ] README & CHANGELOG updated
+- [ ] GitHub release created
+- [ ] v1.2 LIVE
 
+---
 
 ## Công cụ & Tài nguyên
 
 | Công cụ | Mục đích | Chủ sở hữu | Thiết lập vào |
 |--------|---------|-----------|-----------|
-| GitHub | Kho mã | Cả hai | W1 Ngày 1 |
-| Jira/Trello | Theo dõi công việc | Cả hai | W1 Ngày 1 |
-| SQLite | Cơ sở dữ liệu | A | W1 |
-| FastAPI | API framework | A | W2 |
-| Pytest | Kiểm tra backend | A | W3 |
-| Streamlit | Frontend | B | W1 |
-| Docker | Optional containerization | A | W3 |
-| Heroku/Railway | Deployment | A/B | W3 |
+| GitHub | Version control | Cả hai | W1 Ngày 1 |
+| Pytest | Unit testing | A | W2 |
+| Streamlit | Frontend | B | Đã có |
+| Plotly | Visualizations | B | W2 |
+| Docker | Optional deployment | A | W3 |
 
 ---
+
+## Tóm Tắt Output
+
+**Hoàng (Backend/ML):**
+- Optimized hybrid_engine.py
+- Performance benchmarks
+- New prediction features
+- Unit tests (70%+ coverage)
+- Complete documentation
+
+**Long (Frontend):**
+- Responsive design (mobile, tablet, desktop)
+- Dark mode toggle
+- Advanced visualizations
+- Cross-browser tested
+- Production-ready UI
+
+**Output:**
+- v1.2 release on GitHub
+- Clean, documented codebase
+- Performance improvements
+- Better UX in Streamlit app
 
