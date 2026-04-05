@@ -22,8 +22,8 @@ RF_PARAMS = {
 # ============================================================================
 # DỮ LIỆU
 # ============================================================================
-DATA_PATH = 'data_tuyensinh.csv'
-NUM_SAMPLES = 50000  # Số lượng mẫu dữ liệu tạo ra
+DATA_PATH = 'data_tuyensinh_balanced.csv'  # Sử dụng dữ liệu cân bằng
+NUM_SAMPLES = 117280  # Số lượng mẫu dữ liệu (cân bằng)
 
 # Các đặc trưng (Features)
 FEATURE_NAMES = ['toan', 'ly', 'hoa', 'sinh', 'van', 'anh', 'lich_su', 'dia_ly', 'tin_hoc']
