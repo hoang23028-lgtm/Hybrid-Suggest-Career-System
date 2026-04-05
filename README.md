@@ -258,14 +258,14 @@ Dataset: 117,280 mẫu tổng hợp
  Generation: Thuật toán "nhóm điểm" thông minh
 
 Phân bố Dữ Liệu:
- IT: 19.7% (9825 mẫu)
- Y Khoa: 29.3% (14660 mẫu)
- Luật Pháp: 16.0% (7980 mẫu)
- Kỹ Thuật: 10.0% (5011 mẫu)
- Sư Phạm: 8.7% (4360 mẫu)
- Nông-Lâm-Ngư: 7.9% (3961 mẫu)
- Du Lịch: 4.6% (2299 mẫu)
- Kinh Tế: 3.8% (1904 mẫu)
+ IT: 20.1% (23540 mẫu)
+ Y Khoa: 29.0% (33955 mẫu)
+ Luật Pháp: 16.0% (18797 mẫu)
+ Kỹ Thuật: 9.9% (11601 mẫu)
+ Sư Phạm: 8.7% (10235 mẫu)
+ Nông-Lâm-Ngư: 7.9% (9303 mẫu)
+ Du Lịch: 4.7% (5517 mẫu)
+ Kinh Tế: 3.7% (4332 mẫu)
 ```
 
 ---
