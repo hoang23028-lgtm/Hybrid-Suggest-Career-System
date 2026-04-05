@@ -253,8 +253,8 @@ Tác dụng:
 Dataset: 117,280 mẫu tổng hợp
  Features: 9 (Toán, Lý, Hóa, Sinh, Văn, Anh, Lịch, Địa, Tin)
  Target: 8 ngành chính 
- Format: CSV (data_tuyensinh.csv)
- Size: ~18.5 MB
+ Format: CSV (data_tuyensinh_balanced.csv)
+ Size: ~18.48 MB
  Generation: Thuật toán "nhóm điểm" thông minh
 
 Phân bố Dữ Liệu:
@@ -366,8 +366,9 @@ lsof -i :8504 | grep LISTEN | awk '{print $2}' | xargs kill -9
 **Nguyên nhân:** RAM không đủ
 
 **Giải pháp:**
-- Giảm NUM_SAMPLES trong config.py từ 10000 → 5000
-- Đóng các ứng dụng khác
+- Sử dụng máy mía có RAM ất nhất 4GB
+- Giảm NUM_SAMPLES trong create_data.py
+- Đóng các ứng dụng khác đang chạy
 
 ### Output bị "Mịn quá" (mặc định đã sửa)
 
@@ -508,17 +509,18 @@ python evaluate_model.py
 | Metric | ML Thuần | Hybrid | Cải Thiện |
 |--------|----------|--------|-----------|
 | Accuracy | 90.83% | 91.35% | +0.52% |
-| Precision | 0.8864 | 0.8931 | +0.67% |
-| Recall | 0.8860 | 0.8923 | +0.63% |
-| F1-Score | 0.8862 | 0.8927 | +0.65% |
+| Precision | 0.8972 | 0.9053 | +0.81% |
+| Recall | 0.9083 | 0.9135 | +0.52% |
+| F1-Score | 0.9027 | 0.9093 | +0.66% |
 
 **Phân tích Fuzzy Confidence:**
-- Score ≥ 70%: 65234/23456 (93.2%)
-- Score ≥ 80%: 18234/23456 (77.8%)
+- Score ≥ 70%: ~94.56% (dự đoán có confidence cao)
+- Score ≥ 80%: ~82.34% (dự đoán rất có tĩn nhẬm)
 
 **Khuyến nghị:**
--  Sử dụng Hybrid System - cải thiện +0.63%
-- Fuzzy Logic giúp "mềm hóa" quyết định
+-  Sử dụng Hybrid System - cải thiện +0.52%
+- Fuzzy Logic giup "mềm hóa" quyết định
+hínhh
 - Tăng độ tin cậy của recommendation
 
 ---
