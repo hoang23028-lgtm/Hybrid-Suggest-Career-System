@@ -1,15 +1,17 @@
-# ✅ DANH SÁCH KIỂM TRA - 3 TUẦN, 2 NGƯỜI
+# DANH SÁCH KIỂM TRA - 3 TUẦN, 2 NGƯỜI
 
-## 👥 Phân Công
+## Phân Công
 
-- **Người A (Kỹ sư Backend/ML):** Tối ưu ML, API, Cơ sở dữ liệu
-- **Người B (Kỹ sư Frontend):** Giao diện, Triển khai, Tài liệu
+- **Dev1 - Hoàng (Backend/ML Engineer):** Tối ưu ML, API, Cơ sở dữ liệu
+- **Dev2 - Long (Frontend Engineer):** Giao diện, Triển khai, Tài liệu
+
+**Buổi Dev:** Thứ 3 & Thứ 6, 10:00-16:00
 
 ---
 
-## 🗓️ TUẦN 1: Chuẩn Bị (7 ngày)
+## TUẦN 1: Chuẩn Bị (7 ngày)
 
-### ✅ Công Việc Developer A - Backend
+### Công Việc Developer A - Backend
 
 - **Ngày 1-3: Tối ưu Mô hình ML**
   - [ ] Phân tích hiệu suất mô hình hiện tại (cơ sở: 82%)
@@ -32,7 +34,7 @@
   - [ ] File: `database.py`, migration scripts
   - **Deliverable:** Cơ sở dữ liệu sẵn sàng tích hợp
 
-### ✅ Công Việc Developer B - Frontend
+### Công Việc Developer B - Frontend
 
 - **Ngày 1-3: Kiểm tra & Tái cấu trúc Code**
   - [ ] Kiểm tra phong cách code trong `app.py`
@@ -48,16 +50,16 @@
   - [ ] Cập nhật CSS
   - **Deliverable:** Giao diện tốt hơn
 
-### 📊 Đồng bộ Tuần 1
+### Đồng bộ Tuần 1
 - [ ] Cuộc họp kiểm tra code
 - [ ] Hợp nhất cả hai PR
 - [ ] Kiểm tra nhanh
 
 ---
 
-## 🗓️ TUẦN 2: Phát Triển (7 ngày)
+## TUẦN 2: Phát Triển (7 ngày)
 
-### ✅ Công Việc Developer A - Backend
+### ✅ Công Việc Developer A (Hoàng) - Backend
 
 - **Ngày 8-9: Bộ nhớ đệm & Tối ưu hóa**
   - [ ] Triển khai lớp caching
@@ -82,7 +84,7 @@
   - [ ] Tạo tài liệu API
   - **Deliverable:** API sẵn sàng cho frontend
 
-### ✅ Công Việc Developer B - Frontend
+### ✅ Công Việc Developer B (Long) - Frontend
 
 - **Ngày 8-9: Ứng dụng Đa trang**
   - [ ] Thêm trang Lịch sử (hiển thị các khuyến nghị trước đó)
@@ -104,16 +106,16 @@
   - [ ] Xử lý trạng thái loading/lỗi
   - [ ] **Deliverable:** Frontend kết nối với API
 
-### 📊 Đồng bộ Tuần 2
+### Đồng bộ Tuần 2
 - [ ] Demo tích hợp
 - [ ] Kiểm tra hiệu suất
 - [ ] Hợp nhất PR mới nhất
 
 ---
 
-## 🗓️ TUẦN 3: Kiểm tra & Triển khai (7 ngày)
+## TUẦN 3: Kiểm tra & Triển khai (7 ngày)
 
-### ✅ Công Việc Developer A - Backend
+### ✅ Công Việc Developer A (Hoàng) - Backend
 
 - **Ngày 15-16: Unit Tests**
   - [ ] Tạo `tests/test_ml.py`
@@ -148,7 +150,7 @@
   - [ ] Triển khai backend
   - [ ] **Deliverable:** Backend chạy trong sản xuất
 
-### ✅ Công Việc Developer B - Frontend
+### ✅ Công Việc Developer B (Long) - Frontend
 
 - **Ngày 15-16: Kiểm tra Giao diện**
   - [ ] Kiểm tra trên nhiều trình duyệt (Chrome, Safari, Firefox)
@@ -178,7 +180,7 @@
   - [ ] Giám sát sản xuất
   - [ ] **Deliverable:** Frontend hoạt động
 
-### 📊 Danh sách Kiểm tra Cuối cùng (Ngày 21)
+### Danh sách Kiểm tra Cuối cùng (Ngày 21)
 - [ ] Tất cả kiểm tra vượt
 - [ ] Phủ code 80%+
 - [ ] Không có lỗi đã biết
@@ -191,10 +193,10 @@
 
 ---
 
-## 📊 Mẫu Trạng thái Hàng ngày
+## Mẫu Trạng thái Hàng ngày
 
 **Ngày:** ___________  
-**Người:** A / B
+**Người:** Hoàng / Long
 
 ### Điều Tôi Hoàn Thành Hôm nay
 - [ ] Công việc 1: ___________
@@ -213,7 +215,7 @@
 
 ---
 
-## 🎯 Danh sách Kiểm tra Xem xét Hàng tuần
+## Danh sách Kiểm tra Xem xét Hàng tuần
 
 ### Cuối Tuần 1 (Ngày 7)
 - [ ] Độ chính xác ML 85%+ ✓
@@ -233,9 +235,9 @@
 - [ ] Không có vấn đề blockers kriteria ✓
 
 ### Cuối Tuần 3 (Ngày 21) - KIỂM TRA CUỐI CÙNG
-- [ ] ✅ Backend trong sản xuất
-- [ ] ✅ Frontend trong sản xuất
-- [ ] ✅ Tất cả kiểm tra vượt (80%+)
+- [ ] Backend trong sản xuất
+- [ ] Frontend trong sản xuất
+- [ ] Tất cả kiểm tra vượt (80%+)
 - [ ] ✅ Không có lỗi đã biết
 - [ ] ✅ Tài liệu hoàn chỉnh
 - [ ] ✅ CHANGELOG & releases được tạo

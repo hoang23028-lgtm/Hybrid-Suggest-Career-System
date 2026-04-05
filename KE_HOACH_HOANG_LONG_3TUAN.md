@@ -1,4 +1,4 @@
-# 📋 Kế Hoạch Phân Chia Công Việc - HOÀNG & LONG - 3 Tuần
+# Kế Hoạch Phân Chia Công Việc - HOÀNG & LONG - 3 Tuần
 
 **Dự án:** Hệ Thống Gợi Ý Ngành Học Hybrid v1.1  
 **Thời gian:** 3 tuần (21 ngày)  
@@ -18,7 +18,7 @@
 
 ---
 
-## 📅 Buổi Dev Mỗi Tuần
+## Buổi Dev Mỗi Tuần
 
 | Buổi | Thời gian | Nội dung |
 |------|----------|---------|
@@ -28,7 +28,7 @@
 
 ---
 
-## 📅 TUẦN 1: Chuẩn Bị & Triển Khai Cơ Bản
+## TUẦN 1: Chuẩn Bị & Triển Khai Cơ Bản
 
 ### 🔧 Hoàng (Backend/ML)
 
@@ -74,7 +74,7 @@
 
 ---
 
-## 📅 TUẦN 2: Phát Triển & Tích Hợp Nâng Cao
+## TUẦN 2: Phát Triển & Tích Hợp Nâng Cao
 
 ### 🔧 Hoàng (Backend/ML)
 
@@ -120,7 +120,7 @@
 
 ---
 
-## 📅 TUẦN 3: Testing, Deployment & Documentation
+## TUẦN 3: Testing, Deployment & Documentation
 
 ### 🔧 Hoàng (Backend/ML)
 
@@ -166,7 +166,7 @@
 - ✅ Frontend in production
 - ✅ Documentation complete
 - ✅ CHANGELOG created
-- ✅ 🚀 LIVE!
+- LIVE!
 
 ---
 
@@ -209,7 +209,7 @@
 | **T6** | **Buổi 2: Backend LIVE** | **Buổi 2: Frontend LIVE** |
 | T7 | Final check | CHANGELOG, release |
 
-**Output:** 🚀 PRODUCTION LIVE ✅
+**Output:** PRODUCTION LIVE
 
 ---
 
@@ -246,7 +246,7 @@
 
 ---
 
-## 🎯 Success Criteria
+## Success Criteria
 
 ### Tuần 1 ✅
 - [ ] Hoàng: ML 85%, Database ready, Fuzzy improved
@@ -261,7 +261,7 @@
 ### Tuần 3 ✅ (FINAL)
 - [ ] Hoàng: Tests passing (80%+), Backend LIVE
 - [ ] Long: UI polished, Frontend LIVE, Docs complete
-- [ ] Status: **🚀 PRODUCTION LIVE!**
+- [ ] Status: **PRODUCTION LIVE!**
 
 ---
 
