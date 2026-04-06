@@ -3,10 +3,10 @@
 ## 1. Tổng Quan
 
 Tên file: `data_tuyensinh_balanced.csv`  
-Kích thước: 18.48 MB  
-Số lượng mẫu: 117,280 hàng  
+Kích thước: ~9.05 MB  
+Số lượng mẫu: 118,449 hàng  
 Số cột: 10 cột (9 features + 1 label)  
-Loại dữ liệu: Dữ liệu tổng hợp ngẫu nhiên  
+Loại dữ liệu: Dữ liệu tổng hợp ngẫu nhiên không cân bằng (thực tế)  
 
 Mục đích: Huấn luyện mô hình Machine Learning (Random Forest) để gợi ý ngành học phù hợp dựa trên điểm số 9 môn.
 
@@ -88,14 +88,15 @@ python create_data.py
 ```
 
 **Output:**
-- `data_tuyensinh_balanced.csv` - File CSV với 117,280 mẫu
+- `data_tuyensinh_balanced.csv` - File CSV với 118,449 mẫu
 - Log thống kê phân bố các ngành
 
 ### 5.2 Quy Trình Tạo
 
 ```python
-1. Tạo 117,280 hàng dữ liệu ngẫu nhiên (cân bằng):
+1. Tạo 118,449 hàng dữ liệu ngẫu nhiên (không cân bằng):
    - Mỗi feature được khởi tạo từ Uniform(3, 10)
+   - Áp dụng tỷ lệ lẻ cho mỗi ngành (12-13%)
    - Sử dụng random seed = 42 (tái lập được)
 
 2. Gán nhãn ngành học:
@@ -113,19 +114,19 @@ python create_data.py
 
 ### 5.3 Phân Bố Dữ Liệu
 
-Ví dụ từ 117,280 mẫu (điển hình):
+Phân bố thực tế của 118,449 mẫu dữ liệu (tỷ lệ lẻ không cân bằng):
 
 ```
-IT - Công nghệ thông tin:        10.2% (5,100 mẫu)
-Kinh tế - Kinh doanh:             9.5% (4,750 mẫu)
-Y khoa - Sức khỏe:               11.8% (5,900 mẫu)
-Kỹ thuật - Xây dựng:             12.5% (6,250 mẫu)
-Nông - Lâm - Ngư:                10.1% (5,050 mẫu)
-Sư phạm - Giáo dục:              12.0% (6,000 mẫu)
-Luật pháp:                        11.2% (5,600 mẫu)
-Du lịch - Khách sạn:             12.7% (6,350 mẫu)
+IT - Công nghệ thông tin:        12.22% (14,484 mẫu)
+Kinh tế - Kinh doanh:             12.66% (14,988 mẫu)
+Y khoa - Sức khỏe:                11.94% (14,132 mẫu)
+Kỹ thuật - Xây dựng:              13.08% (15,492 mẫu)
+Nông - Lâm - Ngư:                 12.42% (14,706 mẫu)
+Sư phạm - Giáo dục:               12.76% (15,117 mẫu)
+Luật pháp:                        12.31% (14,577 mẫu)
+Du lịch - Khách sạn:              12.63% (14,953 mẫu)
 
-TỔNG:                           100.0% (117,280 mẫu)
+TỔNG:                            100.0% (118,449 mẫu)
 ```
 
 ---
@@ -135,7 +136,7 @@ TỔNG:                           100.0% (117,280 mẫu)
 ```python
 # Đường dẫn và kích thước
 DATA_PATH = 'data_tuyensinh_balanced.csv'
-NUM_SAMPLES = 117280
+NUM_SAMPLES = 118449
 
 # Tên các features
 FEATURE_NAMES = ['toan', 'ly', 'hoa', 'sinh', 'van', 'anh', 'lich_su', 'dia_ly', 'tin_hoc']
@@ -198,8 +199,8 @@ print(f"Ngành được gợi ý: {NGANH_HOC_MAP[prediction[0]]}")
 
 ```
 Mỗi feature (trong 9 môn) có thống kê:
-- Mean: ~6.5
-- Std: ~2.0
+- Mean: ~6.29 (dao động 6.15-6.82)
+- Std: ~2.00 (dao động 1.97-2.03)
 - Min: 3.0
 - Max: 10.0
 - Distribution: Uniform (ngẫu nhiên)
@@ -225,10 +226,10 @@ Tin học ← IT, Kỹ thuật
 
 ### Ưu Điểm
 
-- Dữ liệu cân bằng tương đối giữa 8 ngành (~12% mỗi ngành)
+- Dữ liệu không cân bằng (tỷ lệ lẻ 12-13%) - giống dữ liệu thực tế
 - Được tạo lặp lại (reproducible) nhờ seed = 42
 - Tuân theo logic giáo dục (quy luật assign_major hợp lý)
-- Kích thước đủ lớn (117,280 mẫu) cho ML training
+- Kích thước đủ lớn (118,449 mẫu) cho ML training
 
 ### Hạn Chế
 
