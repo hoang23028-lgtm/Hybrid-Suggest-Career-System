@@ -32,7 +32,7 @@ def assign_major(row):
     dia_ly = row['dia_ly']
     tin_hoc = row['tin_hoc']
     
-    # === CÁC NHÓM ĐIỂM TON HỢP ===
+    # === CÁC NHÓM ĐIỂM TỔNG HỢP ===
     khoa_hoc = (toan + ly + hoa + sinh) / 4
     cong_nghe = (toan + ly + tin_hoc) / 3
     sinh_hoc = (sinh + hoa + ly) / 3
@@ -117,36 +117,79 @@ def assign_major(row):
         }
         return max(scores, key=scores.get)
 
-def generate_synthetic_data(num_samples=NUM_SAMPLES, output_file=DATA_PATH):
+def generate_synthetic_data(num_samples=NUM_SAMPLES, output_file=DATA_PATH, balance=False, class_ratios=None):
     """
     Tạo dữ liệu tổng hợp cho hệ thống AI gợi ý ngành học.
     
     Args:
-        num_samples (int): Số lượng mẫu dữ liệu
+        num_samples (int): Tổng số lượng mẫu dữ liệu cần tạo
         output_file (str): Tên file CSV output
+        balance (bool): Nếu True, dữ liệu sẽ cân bằng hoàn hảo (12.5% mỗi ngành)
+        class_ratios (list): Danh sách tỷ lệ (%) cho mỗi ngành, tổng = 100. 
+                            Nếu None và balance=False, sẽ dùng tỷ lệ không cân bằng 12-13%
     
     Returns:
         pd.DataFrame: DataFrame chứa dữ liệu được tạo
     """
-    logger.info(f"Bắt đầu tạo {num_samples} mẫu dữ liệu tổng hợp...")
+    # Xác định tỷ lệ cho mỗi ngành
+    if balance:
+        logger.info(f"Bắt đầu tạo {num_samples} mẫu dữ liệu tổng hợp CÂN BẰNG (12.5% mỗi ngành)...")
+        # Cân bằng hoàn hảo: mỗi ngành 12.5%
+        class_ratios = [12.5] * 8
+    elif class_ratios is None:
+        logger.info(f"Bắt đầu tạo {num_samples} mẫu dữ liệu tổng hợp KHÔNG CÂN BẰNG (tỷ lệ lẻ dữ liệu thực tế)...")
+        # Tỷ lệ không cân bằng với số lẻ (giống dữ liệu thực tế)
+        class_ratios = [12.35, 12.78, 12.05, 13.21, 12.54, 12.89, 12.43, 12.75]  # Tổng = 100%
+    else:
+        logger.info(f"Bắt đầu tạo {num_samples} mẫu dữ liệu tổng hợp với tỷ lệ tùy chỉnh...")
+    
     np.random.seed(42)
     
-    # Tạo ngẫu nhiên điểm số từ 3.0 đến 10.0 cho 9 môn
-    data = pd.DataFrame({
-        'toan': np.random.uniform(3, 10, num_samples),
-        'ly': np.random.uniform(3, 10, num_samples),
-        'hoa': np.random.uniform(3, 10, num_samples),
-        'sinh': np.random.uniform(3, 10, num_samples),
-        'van': np.random.uniform(3, 10, num_samples),
-        'anh': np.random.uniform(3, 10, num_samples),
-        'lich_su': np.random.uniform(3, 10, num_samples),
-        'dia_ly': np.random.uniform(3, 10, num_samples),
-        'tin_hoc': np.random.uniform(3, 10, num_samples)
-    })
+    num_classes = len(NGANH_HOC_MAP)
+    # Tính số mẫu cho mỗi ngành dựa trên tỷ lệ
+    target_per_class = {i: int((class_ratios[i] / 100) * num_samples) for i in range(num_classes)}
     
-    # Gán nhãn ngành học
-    logger.info("Gán nhãn ngành học...")
-    data['nganh_hoc'] = data.apply(assign_major, axis=1)
+    collected_data = []
+    class_counts = {i: 0 for i in range(num_classes)}
+    batch_size = 50000
+    
+    # Tính tổng mẫu cần thiết (có thể lệch do làm tròn)
+    total_target = sum(target_per_class.values())
+    
+    while sum(class_counts.values()) < total_target:
+        # Tạo batch dữ liệu ngẫu nhiên
+        batch_df = pd.DataFrame({
+            'toan': np.random.uniform(3, 10, batch_size),
+            'ly': np.random.uniform(3, 10, batch_size),
+            'hoa': np.random.uniform(3, 10, batch_size),
+            'sinh': np.random.uniform(3, 10, batch_size),
+            'van': np.random.uniform(3, 10, batch_size),
+            'anh': np.random.uniform(3, 10, batch_size),
+            'lich_su': np.random.uniform(3, 10, batch_size),
+            'dia_ly': np.random.uniform(3, 10, batch_size),
+            'tin_hoc': np.random.uniform(3, 10, batch_size)
+        })
+        
+        # Gán nhãn cho batch
+        batch_df['nganh_hoc'] = batch_df.apply(assign_major, axis=1)
+        
+        # Lọc và lấy số lượng mẫu cần thiết cho từng class
+        for class_id in range(num_classes):
+            if class_counts[class_id] < target_per_class[class_id]:
+                needed = target_per_class[class_id] - class_counts[class_id]
+                class_samples = batch_df[batch_df['nganh_hoc'] == class_id]
+                
+                samples_to_add = class_samples.head(needed)
+                if not samples_to_add.empty:
+                    collected_data.append(samples_to_add)
+                    class_counts[class_id] += len(samples_to_add)
+                    
+        current_total = sum(class_counts.values())
+        logger.info(f"Đã thu thập: {current_total}/{total_target} mẫu...")
+            
+    # Nối tất cả dữ liệu và xáo trộn (shuffle)
+    data = pd.concat(collected_data, ignore_index=True)
+    data = data.sample(frac=1, random_state=42).reset_index(drop=True)
     
     # Validation dữ liệu
     if data.isnull().sum().sum() > 0:
@@ -176,4 +219,12 @@ def generate_synthetic_data(num_samples=NUM_SAMPLES, output_file=DATA_PATH):
         return None
 
 if __name__ == "__main__":
-    generate_synthetic_data()
+    import sys
+    
+    # Kiểm tra tham số dòng lệnh
+    balance = "--balanced" in sys.argv or "--balance" in sys.argv
+    
+    if balance:
+        generate_synthetic_data(balance=True)
+    else:
+        generate_synthetic_data(balance=False)
