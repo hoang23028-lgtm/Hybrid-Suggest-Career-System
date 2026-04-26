@@ -348,35 +348,39 @@ elif st.session_state.page == "analyze":
                     st.info(result['explanation'])
         
     elif check_all_btn:
-        st.header("Top 4 Ngành Phù Hợp Nhất")
+        st.header("Xếp Hạng Tất Cả Ngành")
         
         user_scores = [s_toan, s_ly, s_hoa, s_sinh, s_van, s_anh, s_lich_su, s_dia_ly, s_tin]
         
         # Validate model
-        model = get_model()
+        model = get_hybrid_model()
         if model is None:
             st.error("Lỗi: Không thể tải mô hình ML!")
             st.stop()
         
-        # Lấy xếp hạng tất cả ngành
-        rankings = get_all_majors_ranking(user_scores)
+        # Lấy xếp hạng hybrid tất cả ngành
+        hybrid_rankings = get_hybrid_ranking(user_scores, model=model)
         
-        # Sắp xếp theo score giảm dần và lấy top 4
-        top_4 = sorted(rankings, key=lambda x: (x['score'], x.get('relevance_score', 0)), reverse=True)[:4]
-        
-        # Hiển thị top 4 ngành từ trên xuống
-        for idx, result in enumerate(top_4, 1):
-            medal = ['#1', '#2', '#3', '#4'][idx-1]
+        # Hiển thị tất cả ngành từ trên xuống
+        for idx, result in enumerate(hybrid_rankings, 1):
+            hs = result['hybrid_score']
+            level = "Rất phù hợp" if hs >= 75 else "Khá phù hợp" if hs >= 50 else "Không phù hợp"
+            ml_display = f"{result['ml_score']:.1f}%" if result['ml_score'] is not None else "N/A"
+            
             with st.container():
-                col1, col2, col3 = st.columns([0.5, 2, 1])
+                col1, col2, col3, col4, col5 = st.columns([0.3, 1.5, 0.8, 0.8, 0.8])
                 with col1:
-                    st.markdown(f"# {medal}")
+                    st.markdown(f"### #{idx}")
                 with col2:
                     st.markdown(f"### {result['major']}")
                 with col3:
-                    st.markdown(f"### {result['score']:.1f}%")
+                    st.metric("Hybrid", f"{hs:.1f}%")
+                with col4:
+                    st.metric("ML", ml_display)
+                with col5:
+                    st.metric("KBS", f"{result['kbs_score']:.1f}%")
                 
-                st.info(result['explanation'])
+                st.caption(f"Mức độ: **{level}**")
                 st.divider()
     
     else:

@@ -910,7 +910,7 @@ Kết quả: IT_Fit được chọn → base_score = 80
 **Tại sao ưu tiên specificity?**
 - Luật có **nhiều điều kiện hơn** = mô tả **chính xác hơn** về học sinh
 - IT_Fit (4 ĐK: Toán+Tin+Lý+Anh) mô tả cụ thể hơn IT_Very_Fit (3 ĐK: Toán+Tin+Lý)
-- Triết lý: "Luật cụ thể hơn luôn đáng tin hơn luật chung"
+- Luật cụ thể hơn luôn đáng tin hơn luật chung
 
 ### Trường Hợp Đặc Biệt
 

@@ -212,7 +212,7 @@ def get_all_majors_ranking(user_scores):
                             'ml_score': ranking['ml_score'],  # 0-10
                             'kbs_score': ranking['kbs_score'],  # 0-100%
                             'relevance_score': ranking.get('relevance_score', 0),  # Tie-breaking
-                            'explanation': f"Hybrid: {ranking['hybrid_score']:.1f}% (ML: {ranking['ml_score']*10:.1f}% + KBS: {ranking['kbs_score']:.1f}%)",
+                            'explanation': ranking.get('explanation', f"Hybrid: {ranking['hybrid_score']:.1f}% (ML: {ranking['ml_score']:.1f}% + KBS: {ranking['kbs_score']:.1f}%)"),
                             'rank': idx + 1,
                             'hybrid_result': ranking  # Chi tiết đầy đủ từ hybrid_fusion
                         })
