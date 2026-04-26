@@ -7,6 +7,9 @@ import logging
 from hybrid_engine import (
     get_hybrid_advice, get_all_majors_ranking, NGANH_HOC_MAP
 )
+from hybrid_fusion import (
+    calculate_hybrid_score, get_hybrid_ranking, load_ml_model
+)
 
 # Cấu hình logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -36,9 +39,14 @@ st.markdown("""
 # --- STREAMLIT CACHE OPTIMIZATIONS ---
 @st.cache_resource
 def get_model():
-    """Cache mô hình ML - chỉ load một lần"""
+    """Cache mô hình ML"""
     from hybrid_engine import load_model
     return load_model()
+
+@st.cache_resource
+def get_hybrid_model():
+    """Cache Random Forest model cho hybrid_fusion"""
+    return load_ml_model()
 
 # --- INITIALIZE SESSION STATE & VARIABLES ---
 if "page" not in st.session_state:
@@ -63,7 +71,7 @@ s_tin = 9
 col1, col2 = st.columns([0.9, 0.1])
 with col1:
     st.title(" Hybrid Suggest Career System")
-    st.markdown("*Hệ thống gợi ý ngành học AI lai kết hợp Machine Learning & Fuzzy Logic*")
+    st.markdown("*Hệ thống gợi ý ngành học lai*")
 
 with col2:
     if st.button("Home", help="Quay lại trang chủ", use_container_width=True):
@@ -127,32 +135,20 @@ if st.session_state.page == "home":
     """)
     
     # Thông tin hệ thống
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Mô hình AI", "Random Forest")
-        st.caption("Huấn luyện trên 10000 mẫu dữ liệu")
-    
-    with col2:
-        st.metric("Suy luận", "Fuzzy Logic")
-        st.caption("Xử lý quyết định mờ")
-    
-    with col3:
-        st.metric("Ngành", "8 lựa chọn")
-        st.caption("Đa dạng lĩnh vực")
     
     st.divider()
     
     # Hiển thị thông tin ngành
     st.subheader("Các Ngành Học Được Hỗ Trợ")
     major_info = pd.DataFrame([
-        {"Ngành": "1️⃣ IT - Công nghệ thông tin", "💡 Ưu tiên": "Toán, Lý, Tin học", "📌 Mô tả": "Phát triển phần mềm, AI, An ninh"},
-        {"Ngành": "2️⃣ Kinh tế - Kinh doanh", "💡 Ưu tiên": "Toán, Anh, Văn", "📌 Mô tả": "Quản lý, Kế toán, Tiếp thị"},
-        {"Ngành": "3️⃣ Y khoa - Sức khỏe", "💡 Ưu tiên": "Sinh, Hóa, Lý", "📌 Mô tả": "Bác sĩ, Điều dưỡng, Dược sĩ"},
-        {"Ngành": "4️⃣ Kỹ thuật - Xây dựng", "💡 Ưu tiên": "Toán, Lý, Tin", "📌 Mô tả": "Xây dựng, Cơ khí, Điện"},
-        {"Ngành": "5️⃣ Nông - Lâm - Ngư", "💡 Ưu tiên": "Sinh, Địa lý, Hóa", "📌 Mô tả": "Nông nghiệp, Lâm nghiệp"},
-        {"Ngành": "6️⃣ Sư phạm - Giáo dục", "💡 Ưu tiên": "Văn, Anh, Lịch sử", "📌 Mô tả": "Dạy học, Quản lý giáo dục"},
-        {"Ngành": "7️⃣ Luật pháp", "💡 Ưu tiên": "Lịch sử, Văn, Anh", "📌 Mô tả": "Luật sư, Công tố viên"},
-        {"Ngành": "8️⃣ Du lịch - Khách sạn", "💡 Ưu tiên": "Địa lý, Anh, Văn", "📌 Mô tả": "Hướng dẫn, Quản lý khách sạn"},
+        {"Ngành": "IT - Công nghệ thông tin", "Ưu tiên": "Toán, Lý, Tin học", "Mô tả": "Phát triển phần mềm, AI, An ninh"},
+        {"Ngành": "Kinh tế - Kinh doanh", "Ưu tiên": "Toán, Anh, Văn", "Mô tả": "Quản lý, Kế toán, Tiếp thị"},
+        {"Ngành": "Y khoa - Sức khỏe", "Ưu tiên": "Sinh, Hóa, Lý", "Mô tả": "Bác sĩ, Điều dưỡng, Dược sĩ"},
+        {"Ngành": "Kỹ thuật - Xây dựng", "Ưu tiên": "Toán, Lý, Tin", "Mô tả": "Xây dựng, Cơ khí, Điện"},
+        {"Ngành": "Nông - Lâm - Ngư", "Ưu tiên": "Sinh, Địa lý, Hóa", "Mô tả": "Nông nghiệp, Lâm nghiệp"},
+        {"Ngành": "Sư phạm - Giáo dục", "Ưu tiên": "Văn, Anh, Lịch sử", "Mô tả": "Dạy học, Quản lý giáo dục"},
+        {"Ngành": "Luật pháp", "Ưu tiên": "Lịch sử, Văn, Anh", "Mô tả": "Luật sư, Công tố viên"},
+        {"Ngành": "Du lịch - Khách sạn", "Ưu tiên": "Địa lý, Anh, Văn", "Mô tả": "Hướng dẫn, Quản lý khách sạn"},
     ])
     st.dataframe(major_info, use_container_width=True, hide_index=True)
     
@@ -184,26 +180,7 @@ if st.session_state.page == "home":
     st.divider()
     
     # Công nghệ
-    st.subheader("Công Nghệ Được Sử Dụng")
-    tech_col1, tech_col2 = st.columns(2)
     
-    with tech_col1:
-        st.write("**Machine Learning (Random Forest)**")
-        st.caption("""
-        - 100 cây quyết định
-        - Độ chính xác: 84%
-        - Cross-validation: 5-fold
-        - Được huấn luyện trên 1000 mẫu
-        """)
-    
-    with tech_col2:
-        st.write("**Fuzzy Logic (Mamdani)**")
-        st.caption("""
-        - 9 quy tắc suy luận
-        - Input: Điểm ML
-        - Output: Điểm khuyến nghị (0-100%)
-        - Xử lý quyết định mờ
-        """)
 
 elif st.session_state.page == "analyze":
     # === TRANG PHÂN TÍCH (ANALYSIS PAGE) ===
@@ -218,12 +195,19 @@ elif st.session_state.page == "analyze":
         
         # Lấy xếp hạng tất cả ngành và tìm ngành phù hợp nhất (sử dụng interest cố định 5.0)
         all_rankings = get_all_majors_ranking(user_scores)
-        best_major = max(all_rankings, key=lambda x: x['score'])
+        best_major = max(all_rankings, key=lambda x: (x['score'], x.get('relevance_score', 0)))
         
         score = best_major['score']
         explanation = best_major['explanation']
         ml_score = best_major['ml_score']
         major_name = best_major['major']
+        
+        # Tìm index của ngành được chọn từ hybrid_fusion
+        from hybrid_fusion import MAJOR_NAMES
+        try:
+            best_major_index = MAJOR_NAMES.index(major_name)
+        except ValueError:
+            best_major_index = 0  # Fallback to IT if not found
         
         # Tab 1: Kết quả chính
         tab1, tab2, tab3 = st.tabs(["Kết quả chính", "Phân tích chi tiết", "So sánh ngành"])
@@ -232,27 +216,37 @@ elif st.session_state.page == "analyze":
             st.header("Kết quả Phân Tích")
             
             if score is not None:
+                # === BƯỚC 1: TÍNH HYBRID SCORE ===
+                model = get_hybrid_model()
+                hybrid_result = calculate_hybrid_score(user_scores, major_index=best_major_index, model=model)
+                
                 # Hiển thị các metrics chính
-                col1, col2, col3, col4 = st.columns(4)
+                col1, col2, col3, col4, col5 = st.columns(5)
                 
                 with col1:
                     st.metric("Ngành được chọn", major_name)
                 
                 with col2:
-                    color = "🟢" if score >= 75 else "🟡" if score >= 50 else "🔴"
-                    st.metric("Mức độ khuyến nghị", f"{score:.1f}%", delta=f"{color}")
+                    color_hybrid = "Good" if hybrid_result['hybrid_score'] >= 75 else "Fair" if hybrid_result['hybrid_score'] >= 50 else "Low"
+                    st.metric("Hybrid Score", f"{hybrid_result['hybrid_score']:.1f}%", delta=color_hybrid)
                 
                 with col3:
-                    st.metric("Điểm ML", f"{ml_score:.1f}/10")
+                    ml_score_display = f"{hybrid_result['ml_score']:.1f}%" if hybrid_result['ml_score'] is not None else "N/A"
+                    st.metric("ML Score", ml_score_display)
                 
                 with col4:
-                    st.metric("Phân tích", "Ngành phù hợp nhất")
+                    st.metric("KBS Score", f"{hybrid_result['kbs_score']:.1f}%")
+                
+                with col5:
+                    hs = hybrid_result['hybrid_score']
+                    level = "Rất phù hợp" if hs >= 75 else "Khá phù hợp" if hs >= 50 else "Không phù hợp"
+                    st.metric("Mức độ khuyến nghị", level)
                 
                 st.divider()
                 
                 # Giải thích chi tiết
                 st.subheader("Giải thích chi tiết")
-                st.info(explanation)
+                st.info(hybrid_result['explanation'])
             else:
                 st.error("Có lỗi xảy ra trong quá trình phân tích. Vui lòng thử lại!")
         
@@ -292,33 +286,66 @@ elif st.session_state.page == "analyze":
         with tab3:
             st.header("So Sánh Các Ngành")
             
-            # Lấy ranking tất cả ngành
+            # === BƯỚC 2: TÍNH HYBRID RANKING CHO TẤT CẢ NGÀNH ===
+            model = get_hybrid_model()
+            hybrid_rankings = get_hybrid_ranking(user_scores, model=model)
+            ranking_df = pd.DataFrame(hybrid_rankings)
+            
+            # Biểu đồ so sánh (Hybrid, ML, KBS)
+            st.subheader("Biểu đồ So Sánh - Hybrid vs ML vs KBS")
+            fig_hybrid_compare = go.Figure(data=[
+                go.Bar(name='Hybrid Score', x=ranking_df['major'], y=ranking_df['hybrid_score'], marker_color='indianred'),
+                go.Bar(name='ML Score', x=ranking_df['major'], y=ranking_df['ml_score'], marker_color='lightsalmon'),
+                go.Bar(name='KBS Score', x=ranking_df['major'], y=ranking_df['kbs_score'], marker_color='lightgreen')
+            ])
+            fig_hybrid_compare.update_layout(
+                barmode='group',
+                title='Xếp hạng các ngành: Hybrid vs ML vs KBS',
+                xaxis_title='Ngành học',
+                yaxis_title='Điểm (%)',
+                height=400,
+                hovermode='x unified'
+            )
+            st.plotly_chart(fig_hybrid_compare, use_container_width=True)
+            
+            st.divider()
+            
+            # Lấy ranking từ hybrid_engine (cũ) để so sánh
             rankings = get_all_majors_ranking(user_scores)
             
-            # Biểu đồ so sánh
-            ranking_df = pd.DataFrame(rankings)
-            fig_compare = px.bar(
-                ranking_df,
-                x='major',
-                y='score',
-                color='score',
-                title="Xếp hạng các ngành",
-                labels={'major': 'Ngành học', 'score': 'Điểm khuyến nghị (%)'},
-                color_continuous_scale="RdYlGn"
-            )
-            fig_compare.update_layout(height=400)
-            st.plotly_chart(fig_compare, use_container_width=True)
-            
             # Bảng chi tiết
-            st.subheader("Chi tiết xếp hạng")
-            for idx, result in enumerate(rankings, 1):
-                with st.expander(f"#{idx} {result['major']} - Điểm: {result['score']:.1f}%"):
-                    col1, col2 = st.columns(2)
+            st.subheader("Chi tiết Xếp Hạng - HYBRID")
+            st.caption("Hybrid = 60% ML + 40% KBS - Đây là kết quả được khuyên dùng")
+            
+            # Tạo bảng so sánh
+            comparison_data = []
+            for idx, result in enumerate(hybrid_rankings, 1):
+                comparison_data.append({
+                    'Rank': idx,
+                    'Ngành': result['major'],
+                    'Hybrid': f"{result['hybrid_score']:.1f}%",
+                    'ML Score': f"{result['ml_score']:.1f}%" if result['ml_score'] is not None else "N/A",
+                    'KBS Score': f"{result['kbs_score']:.1f}%",
+                })
+            
+            comparison_df = pd.DataFrame(comparison_data)
+            st.dataframe(comparison_df, use_container_width=True, hide_index=True)
+            
+            st.divider()
+            
+            # Chi tiết từng ngành
+            st.subheader("Chi Tiết Từng Ngành")
+            for idx, result in enumerate(hybrid_rankings, 1):
+                ml_score_display = f"{result['ml_score']:.1f}%" if result['ml_score'] is not None else "N/A"
+                with st.expander(f"#{idx} {result['major']} - Hybrid: {result['hybrid_score']:.1f}% | ML: {ml_score_display} | KBS: {result['kbs_score']:.1f}%"):
+                    col1, col2, col3 = st.columns(3)
                     with col1:
-                        st.metric("Mức độ khuyến nghị", f"{result['score']:.1f}%")
+                        st.metric("Hybrid Score", f"{result['hybrid_score']:.1f}%")
                     with col2:
-                        st.metric("Điểm ML", f"{result['ml_score']:.1f}/10")
-                    st.write(result['explanation'])
+                        st.metric("ML Score", f"{result['ml_score']:.1f}%" if result['ml_score'] is not None else "N/A")
+                    with col3:
+                        st.metric("KBS Score", f"{result['kbs_score']:.1f}%")
+                    st.info(result['explanation'])
         
     elif check_all_btn:
         st.header("Top 4 Ngành Phù Hợp Nhất")
@@ -335,11 +362,11 @@ elif st.session_state.page == "analyze":
         rankings = get_all_majors_ranking(user_scores)
         
         # Sắp xếp theo score giảm dần và lấy top 4
-        top_4 = sorted(rankings, key=lambda x: x['score'], reverse=True)[:4]
+        top_4 = sorted(rankings, key=lambda x: (x['score'], x.get('relevance_score', 0)), reverse=True)[:4]
         
         # Hiển thị top 4 ngành từ trên xuống
         for idx, result in enumerate(top_4, 1):
-            medal = ['🥇', '🥈', '🥉', '4️⃣'][idx-1]
+            medal = ['#1', '#2', '#3', '#4'][idx-1]
             with st.container():
                 col1, col2, col3 = st.columns([0.5, 2, 1])
                 with col1:

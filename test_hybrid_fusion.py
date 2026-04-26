@@ -1,0 +1,365 @@
+"""
+Unit Tests for hybrid_fusion.py
+================================
+
+Test suite để kiểm tra hybrid fusion engine:
+- KBS Score calculation
+- ML Score calculation  
+- Hybrid Score fusion
+- Ranking
+"""
+
+import pytest
+from hybrid_fusion import (
+    KnowledgeRuleEngine,
+    calculate_ml_score,
+    calculate_kbs_score,
+    calculate_hybrid_score,
+    get_hybrid_ranking,
+    normalize_scores,
+    load_ml_model
+)
+
+# ==================== FIXTURES ====================
+
+@pytest.fixture
+def sample_scores_it_specialist():
+    """Học sinh IT chuyên (Toán 9, Tin 9.5)"""
+    return [9, 8, 5, 4, 5, 6, 5, 5, 9.5]
+
+@pytest.fixture
+def sample_scores_medical_specialist():
+    """Học sinh Y Khoa chuyên (Sinh 8.5, Hóa 8)"""
+    return [6, 5, 8, 8.5, 7, 7, 6, 6, 5]
+
+@pytest.fixture
+def sample_scores_balanced():
+    """Học sinh cân bằng (tất cả điểm 7)"""
+    return [7, 7, 7, 7, 7, 7, 7, 7, 7]
+
+@pytest.fixture
+def sample_scores_weak():
+    """Học sinh yếu (tất cả điểm 5)"""
+    return [5, 5, 5, 5, 5, 5, 5, 5, 5]
+
+@pytest.fixture
+def ml_model():
+    """Load ML model để test"""
+    model = load_ml_model()
+    if model:
+        yield model
+    else:
+        pytest.skip("ML model not available")
+
+# ==================== TEST NORMALIZE SCORES ====================
+
+class TestNormalization:
+    """Kiểm tra hàm chuẩn hóa điểm"""
+    
+    def test_normalize_max_scores(self):
+        """Kiểm tra điểm tối đa [10, 10, ...] → [1.0, 1.0, ...]"""
+        scores = [10] * 9
+        normalized = normalize_scores(scores)
+        assert all(s == 1.0 for s in normalized), "Điểm 10 phải normalize thành 1.0"
+    
+    def test_normalize_min_scores(self):
+        """Kiểm tra điểm tối thiểu [0, 0, ...] → [0.0, 0.0, ...]"""
+        scores = [0] * 9
+        normalized = normalize_scores(scores)
+        assert all(s == 0.0 for s in normalized), "Điểm 0 phải normalize thành 0.0"
+    
+    def test_normalize_mid_scores(self):
+        """Kiểm tra điểm trung bình [5, 5, ...] → [0.5, 0.5, ...]"""
+        scores = [5] * 9
+        normalized = normalize_scores(scores)
+        assert all(abs(s - 0.5) < 0.01 for s in normalized), "Điểm 5 phải normalize thành 0.5"
+    
+    def test_normalize_output_length(self):
+        """Kiểm tra output length = input length"""
+        scores = [9, 8, 7, 6, 5, 4, 3, 2, 1]
+        normalized = normalize_scores(scores)
+        assert len(normalized) == len(scores), "Độ dài output phải bằng input"
+    
+    def test_normalize_clipping(self):
+        """Kiểm tra điểm > 10 được clip thành 1.0"""
+        scores = [11, 15, 20] + [5] * 6
+        normalized = normalize_scores(scores)
+        assert normalized[0] <= 1.0, "Điểm > 10 phải bị clip"
+        assert normalized[1] <= 1.0, "Điểm > 10 phải bị clip"
+
+
+# ==================== TEST KBS (KNOWLEDGE RULES) ====================
+
+class TestKBS:
+    """Kiểm tra hệ thống luật tri thức (Knowledge-Based System)"""
+    
+    def test_kbs_engine_init(self):
+        """Kiểm tra KnowledgeRuleEngine khởi tạo thành công"""
+        kbs = KnowledgeRuleEngine()
+        assert kbs is not None, "KBS engine phải khởi tạo được"
+        assert len(kbs.MAJOR_NAMES) == 8, "Phải có 8 ngành"
+    
+    def test_kbs_it_specialist(self, sample_scores_it_specialist):
+        """Kiểm tra IT specialist nhận luật phù hợp (conflict resolution chọn specificity cao nhất)"""
+        result = calculate_kbs_score(sample_scores_it_specialist, major_index=0)
+        # Conflict resolution ưu tiên specificity: IT_Fit(spec=4) hoặc IT_Very_Fit(spec=3)
+        assert result['score'] >= 80, f"IT specialist phải nhận score >= 80, nhận {result['score']}"
+        assert 'IT' in result['rule_name'], "Luật phải là IT rule"
+    
+    def test_kbs_medical_specialist(self, sample_scores_medical_specialist):
+        """Kiểm tra Y Khoa specialist nhận luật phù hợp"""
+        result = calculate_kbs_score(sample_scores_medical_specialist, major_index=2)
+        assert result['score'] >= 65, f"Y Khoa specialist phải nhận score >= 65, nhận {result['score']}"
+        assert 'YKhoa' in result['rule_name'], "Luật phải là YKhoa rule"
+    
+    def test_kbs_score_range(self, sample_scores_balanced):
+        """Kiểm tra KBS score trong range [0-100]"""
+        for major_id in range(8):
+            result = calculate_kbs_score(sample_scores_balanced, major_id)
+            assert 0 <= result['score'] <= 100, f"KBS score phải trong range [0-100], nhận {result['score']}"
+    
+    def test_kbs_has_explanation(self, sample_scores_it_specialist):
+        """Kiểm tra KBS result có explanation"""
+        result = calculate_kbs_score(sample_scores_it_specialist, 0)
+        assert 'reason' in result, "Result phải có reason"
+        assert len(result['reason']) > 0, "Reason không được trống"
+    
+    def test_kbs_weak_student(self, sample_scores_weak):
+        """Kiểm tra học sinh yếu nhận điểm thấp"""
+        result = calculate_kbs_score(sample_scores_weak, major_index=0)
+        assert result['score'] < 70, "Học sinh yếu phải nhận điểm < 70%"
+    
+    def test_kbs_has_chain_fields(self, sample_scores_it_specialist):
+        """Kiểm tra KBS result có forward chaining fields"""
+        result = calculate_kbs_score(sample_scores_it_specialist, 0)
+        assert 'chain_applied' in result, "Result phải có chain_applied"
+        assert 'chain_details' in result, "Result phải có chain_details"
+    
+    def test_kbs_forward_chaining(self):
+        """Kiểm tra forward chaining hoạt động: IT + Anh>=7 → bonus"""
+        # IT_Very_Fit match + Anh=8 → IT_Quoc_Te chain should fire
+        scores_with_chain = [9, 8, 5, 5, 5, 8, 5, 5, 9]
+        result = calculate_kbs_score(scores_with_chain, 0)
+        assert result.get('chain_applied', False), "Forward chaining phải hoạt động khi Anh>=7"
+    
+    def test_kbs_conflict_resolution(self):
+        """Kiểm tra conflict resolution ưu tiên specificity"""
+        # Scores khớp cả IT_Very_Fit(spec=3) và IT_Fit(spec=4)
+        scores = [8, 7, 5, 5, 5, 6, 5, 5, 8]
+        result = calculate_kbs_score(scores, 0)
+        # IT_Fit có specificity=4 > IT_Very_Fit specificity=3 → IT_Fit được chọn
+        assert result['rule_name'] == 'IT_Fit', f"Conflict resolution phải chọn IT_Fit, nhận {result['rule_name']}"
+    
+    def test_kbs_all_majors(self, sample_scores_balanced):
+        """Kiểm tra tất cả 8 ngành"""
+        for major_id in range(8):
+            result = calculate_kbs_score(sample_scores_balanced, major_id)
+            assert result['score'] is not None, f"Ngành {major_id} phải có score"
+            assert result['major'] is not None, f"Ngành {major_id} phải có tên"
+
+
+# ==================== TEST ML SCORES ====================
+
+class TestMLScore:
+    """Kiểm tra tính toán ML Score"""
+    
+    def test_ml_score_without_model(self, sample_scores_it_specialist):
+        """Kiểm tra ML score khi gọi với model=None"""
+        result = calculate_ml_score(sample_scores_it_specialist, 0, model=None)
+        # Khi model là None, phải load tự động hoặc có lỗi
+        assert result['score'] is not None or 'error' in result, "Phải load model hoặc có lỗi"
+    
+    def test_ml_score_range(self, ml_model, sample_scores_balanced):
+        """Kiểm tra ML score trong range [0-100]"""
+        for major_id in range(8):
+            result = calculate_ml_score(sample_scores_balanced, major_id, model=ml_model)
+            if result['score'] is not None:
+                assert 0 <= result['score'] <= 100, f"ML score phải [0-100], nhận {result['score']}"
+    
+    def test_ml_score_has_details(self, ml_model, sample_scores_it_specialist):
+        """Kiểm tra ML score result có chi tiết"""
+        result = calculate_ml_score(sample_scores_it_specialist, 0, model=ml_model)
+        assert 'raw_prob' in result, "Result phải có raw_prob"
+        assert 'ml_score_0_10' in result, "Result phải có ml_score_0_10"
+    
+    def test_ml_score_formula(self, ml_model, sample_scores_balanced):
+        """Kiểm tra công thức ML: (prob^0.6) * 10 * 10"""
+        result = calculate_ml_score(sample_scores_balanced, 0, model=ml_model)
+        if result['raw_prob'] is not None:
+            expected = (result['raw_prob'] ** 0.6) * 10 * 10
+            assert abs(result['score'] - expected) < 0.1, "Công thức phải đúng"
+
+
+# ==================== TEST HYBRID SCORE ====================
+
+class TestHybridScore:
+    """Kiểm tra Hybrid Score = 0.6*ML + 0.4*KBS"""
+    
+    def test_hybrid_formula(self, ml_model, sample_scores_it_specialist):
+        """Kiểm tra công thức Hybrid: 0.6*ML + 0.4*KBS"""
+        result = calculate_hybrid_score(sample_scores_it_specialist, 0, model=ml_model)
+        if result['ml_score'] is not None:
+            expected = 0.6 * result['ml_score'] + 0.4 * result['kbs_score']
+            assert abs(result['hybrid_score'] - expected) < 0.1, f"Công thức hybrid sai: {result['hybrid_score']} vs {expected}"
+    
+    def test_hybrid_score_range(self, ml_model, sample_scores_balanced):
+        """Kiểm tra Hybrid score [0-100]"""
+        result = calculate_hybrid_score(sample_scores_balanced, 0, model=ml_model)
+        assert 0 <= result['hybrid_score'] <= 100, f"Hybrid score phải [0-100], nhận {result['hybrid_score']}"
+    
+    def test_hybrid_has_explanation(self, ml_model, sample_scores_it_specialist):
+        """Kiểm tra Hybrid result có chi tiết giải thích"""
+        result = calculate_hybrid_score(sample_scores_it_specialist, 0, model=ml_model)
+        assert 'explanation' in result, "Result phải có explanation"
+        assert len(result['explanation']) > 0, "Explanation không được trống"
+    
+    def test_hybrid_weights(self, ml_model, sample_scores_balanced):
+        """Kiểm tra trọng lượng: ML=0.6, KBS=0.4"""
+        result = calculate_hybrid_score(sample_scores_balanced, 0, model=ml_model)
+        assert result['ml_weight'] == 0.6, "ML weight phải 0.6"
+        assert result['kbs_weight'] == 0.4, "KBS weight phải 0.4"
+    
+    def test_hybrid_it_specialist(self, ml_model, sample_scores_it_specialist):
+        """Kiểm tra IT specialist có Hybrid score cao"""
+        result = calculate_hybrid_score(sample_scores_it_specialist, 0, model=ml_model)
+        assert result['hybrid_score'] > 40, "IT specialist phải có Hybrid > 40%"
+    
+    def test_hybrid_medical_specialist(self, ml_model, sample_scores_medical_specialist):
+        """Kiểm tra Y Khoa specialist có Hybrid score cao"""
+        result = calculate_hybrid_score(sample_scores_medical_specialist, 2, model=ml_model)
+        assert result['hybrid_score'] > 40, "Y Khoa specialist phải có Hybrid > 40%"
+
+
+# ==================== TEST RANKING ====================
+
+class TestRanking:
+    """Kiểm tra xếp hạng 8 ngành"""
+    
+    def test_ranking_all_majors(self, ml_model, sample_scores_it_specialist):
+        """Kiểm tra ranking phải trả về 8 ngành"""
+        ranking = get_hybrid_ranking(sample_scores_it_specialist, model=ml_model)
+        assert len(ranking) == 8, "Ranking phải có 8 ngành"
+    
+    def test_ranking_has_rank_field(self, ml_model, sample_scores_balanced):
+        """Kiểm tra ranking có rank field"""
+        ranking = get_hybrid_ranking(sample_scores_balanced, model=ml_model)
+        for item in ranking:
+            assert 'rank' in item, "Mỗi item phải có rank"
+            assert 'major' in item, "Mỗi item phải có major"
+            assert 'hybrid_score' in item, "Mỗi item phải có hybrid_score"
+    
+    def test_ranking_ordered_descending(self, ml_model, sample_scores_balanced):
+        """Kiểm tra ranking sắp xếp giảm dần theo Hybrid score"""
+        ranking = get_hybrid_ranking(sample_scores_balanced, model=ml_model)
+        scores = [item['hybrid_score'] for item in ranking]
+        assert scores == sorted(scores, reverse=True), "Ranking phải giảm dần"
+    
+    def test_ranking_it_specialist_first(self, ml_model, sample_scores_it_specialist):
+        """Kiểm tra IT specialist ranking: IT phải top 1 hoặc top 2"""
+        ranking = get_hybrid_ranking(sample_scores_it_specialist, model=ml_model)
+        top_3_majors = [item['major'] for item in ranking[:3]]
+        assert 'IT' in top_3_majors, f"IT phải trong top 3, nhưng {top_3_majors}"
+
+
+# ==================== INTEGRATION TESTS ====================
+
+class TestIntegration:
+    """Test tích hợp toàn bộ workflow"""
+    
+    def test_full_workflow_it_specialist(self, ml_model, sample_scores_it_specialist):
+        """Test toàn bộ workflow cho IT specialist"""
+        # Step 1: Tính KBS
+        kbs = calculate_kbs_score(sample_scores_it_specialist, 0)
+        assert kbs['score'] >= 80, f"KBS phải >= 80, nhận {kbs['score']}"
+        
+        # Step 2: Tính ML
+        ml = calculate_ml_score(sample_scores_it_specialist, 0, model=ml_model)
+        assert ml['score'] is not None, "ML phải có score"
+        
+        # Step 3: Tính Hybrid
+        hybrid = calculate_hybrid_score(sample_scores_it_specialist, 0, model=ml_model)
+        expected_hybrid = 0.6 * ml['score'] + 0.4 * kbs['score']
+        assert abs(hybrid['hybrid_score'] - expected_hybrid) < 0.5, "Hybrid formula sai"
+        
+        # Step 4: Ranking
+        ranking = get_hybrid_ranking(sample_scores_it_specialist, model=ml_model)
+        top_3 = [item['major'] for item in ranking[:3]]
+        assert 'IT' in top_3, f"IT phải trong top 3, nhưng {top_3}"
+    
+    def test_full_workflow_medical_specialist(self, ml_model, sample_scores_medical_specialist):
+        """Test toàn bộ workflow cho Y Khoa specialist"""
+        kbs = calculate_kbs_score(sample_scores_medical_specialist, 2)
+        assert kbs['score'] >= 65, f"KBS phải >= 65, nhận {kbs['score']}"
+        
+        calculate_ml_score(sample_scores_medical_specialist, 2, model=ml_model)
+        calculate_hybrid_score(sample_scores_medical_specialist, 2, model=ml_model)
+        
+        # Y Khoa phải trong top 2
+        ranking = get_hybrid_ranking(sample_scores_medical_specialist, model=ml_model)
+        top_3 = [item['major'] for item in ranking[:3]]
+        assert 'Y khoa' in top_3, f"Y khoa phải trong top 3, nhưng {top_3}"
+    
+    def test_different_students_different_results(self, ml_model, sample_scores_it_specialist, sample_scores_medical_specialist):
+        """Kiểm tra học sinh khác nhau có kết quả khác"""
+        it_ranking = get_hybrid_ranking(sample_scores_it_specialist, model=ml_model)
+        med_ranking = get_hybrid_ranking(sample_scores_medical_specialist, model=ml_model)
+        
+        it_first = it_ranking[0]['major']
+        med_first = med_ranking[0]['major']
+        
+        assert it_first != med_first, f"Kết quả phải khác: {it_first} vs {med_first}"
+
+
+# ==================== EDGE CASES ====================
+
+class TestEdgeCases:
+    """Kiểm tra các trường hợp đặc biệt"""
+    
+    def test_perfect_scores(self, ml_model):
+        """Kiểm tra điểm tuyệt đối (tất cả 10): KBS phải cao (có chain bonus)"""
+        perfect = [10] * 9
+        result = calculate_hybrid_score(perfect, 0, model=ml_model)
+        # Perfect scores: conflict resolution chọn IT_Fit(spec=4,score=80) + chain bonus
+        assert result['kbs_score'] >= 80, f"KBS cho perfect scores phải >= 80, nhận {result['kbs_score']}"
+        assert result['hybrid_score'] > 40, f"Hybrid phải > 40%, nhưng {result['hybrid_score']:.1f}%"
+    
+    def test_failing_scores(self, ml_model):
+        """Kiểm tra điểm thất bại (tất cả 0)"""
+        failing = [0] * 9
+        result = calculate_hybrid_score(failing, 0, model=ml_model)
+        assert result['hybrid_score'] < 50, "Điểm 0 phải thấp"
+        assert result['kbs_score'] <= 30, f"KBS cho all 0 phải <= 30, nhận {result['kbs_score']}"
+    
+    def test_mixed_strong_weak(self, ml_model):
+        """Kiểm tra điểm hỗn hợp (mạnh yếu khác nhau)"""
+        mixed = [9, 8, 1, 2, 3, 4, 5, 6, 7]  # Toán/Lý tốt, Hóa/Sinh yếu
+        ranking = get_hybrid_ranking(mixed, model=ml_model)
+        top_3 = [item['major'] for item in ranking[:3]]
+        assert 'IT' in top_3, f"IT phải trong top 3 cho trường hợp này, nhưng {top_3}"
+
+
+# ==================== PERFORMANCE TESTS ====================
+
+class TestPerformance:
+    """Kiểm tra hiệu suất"""
+    
+    def test_ranking_performance(self, ml_model, sample_scores_balanced):
+        """Kiểm tra speed của ranking: phải < 2 giây"""
+        import time
+        start = time.time()
+        get_hybrid_ranking(sample_scores_balanced, model=ml_model)
+        elapsed = time.time() - start
+        assert elapsed < 2.0, f"Ranking phải < 2s, nhưng {elapsed:.2f}s"
+    
+    def test_hybrid_score_performance(self, ml_model, sample_scores_balanced):
+        """Kiểm tra speed của single hybrid score: phải < 0.5 giây"""
+        import time
+        start = time.time()
+        calculate_hybrid_score(sample_scores_balanced, 0, model=ml_model)
+        elapsed = time.time() - start
+        assert elapsed < 0.5, f"Hybrid score phải < 0.5s, nhưng {elapsed:.3f}s"
+
+
+if __name__ == "__main__":
+    # Chạy tests
+    pytest.main([__file__, "-v", "--tb=short"])

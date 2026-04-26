@@ -25,6 +25,11 @@ RF_PARAMS = {
 DATA_PATH = 'data_tuyensinh_balanced.csv'  # Sử dụng dữ liệu cân bằng
 NUM_SAMPLES = 117280  # Số lượng mẫu dữ liệu (cân bằng)
 
+# Noise & Overlap - Tạo dữ liệu thực tế hơn (không hoàn toàn rule-based)
+LABEL_NOISE_RATE = 0.08    # 8% mẫu được gán nhãn ngẫu nhiên (mô phỏng học sinh chọn ngành khác)
+FEATURE_NOISE_STD = 0.3    # Độ lệch chuẩn nhiễu Gaussian thêm vào điểm
+BOUNDARY_OVERLAP = 0.5     # Hạ ngưỡng biên 0.5 điểm để tạo vùng chồng lấn
+
 # Các đặc trưng (Features)
 FEATURE_NAMES = ['toan', 'ly', 'hoa', 'sinh', 'van', 'anh', 'lich_su', 'dia_ly', 'tin_hoc']
 FEATURE_DISPLAY_NAMES = {

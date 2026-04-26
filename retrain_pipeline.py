@@ -209,6 +209,37 @@ class RetrainPipeline:
         """)
 
 
+# ============================================================================
+# QUY TRÌNH CẬP NHẬT KBS RULES
+# ============================================================================
+"""
+QUY TRÌNH CẬP NHẬT LUẬT CHUYÊN GIA (KBS Rules):
+
+Khi nào cần cập nhật?
+  1. Khi phát hiện KBS predict sai nhiều (thông qua monitoring)
+  2. Khi có tri thức chuyên gia mới (ví dụ: ngành mới, tiêu chí mới)
+  3. Khi ML-KBS disagreement rate > 40% (từ experiments.py)
+  4. Khi nhận feedback từ người dùng
+
+Cách cập nhật:
+  Bước 1: Chạy evaluate_kbs.py để kiểm tra KBS hiện tại
+      python evaluate_kbs.py
+  
+  Bước 2: Chạy experiments.py để phân tích ML vs KBS
+      python experiments.py
+  
+  Bước 3: Sửa rules_config.json (thresholds, scores, chaining rules)
+  
+  Bước 4: Cập nhật knowledge_rules.py cho phù hợp
+  
+  Bước 5: Chạy lại evaluate_kbs.py để verify
+
+Ai quyết định?
+  - Chuyên gia giáo dục / tư vấn hướng nghiệp
+  - Dựa trên kết quả monitoring và feedback người dùng
+"""
+
+
 def main():
     """Main retrain pipeline"""
     import argparse

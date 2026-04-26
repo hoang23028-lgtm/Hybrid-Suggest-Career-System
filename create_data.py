@@ -1,8 +1,8 @@
 import pandas as pd
 import numpy as np
 import logging
-import os
-from config import FEATURE_NAMES, NGANH_HOC_MAP, NUM_SAMPLES, DATA_PATH
+from config import (FEATURE_NAMES, NGANH_HOC_MAP, NUM_SAMPLES, DATA_PATH,
+                   LABEL_NOISE_RATE, FEATURE_NOISE_STD)
 
 # Cấu hình logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -34,11 +34,7 @@ def assign_major(row):
     
     # === CÁC NHÓM ĐIỂM TỔNG HỢP ===
     khoa_hoc = (toan + ly + hoa + sinh) / 4
-    cong_nghe = (toan + ly + tin_hoc) / 3
-    sinh_hoc = (sinh + hoa + ly) / 3
     nhan_van = (van + anh + lich_su) / 3
-    kinh_te = (toan + anh) / 2
-    du_lich = (dia_ly + anh + van) / 3
     
     # === QUYẾT ĐỊNH NGÀNH ===
     
@@ -117,7 +113,51 @@ def assign_major(row):
         }
         return max(scores, key=scores.get)
 
-def generate_synthetic_data(num_samples=NUM_SAMPLES, output_file=DATA_PATH, balance=False, class_ratios=None):
+def apply_feature_noise(df, noise_std=FEATURE_NOISE_STD):
+    """
+    Thêm nhiễu Gaussian vào điểm số để dữ liệu thực tế hơn.
+    Mô phỏng sai số khi nhập điểm, hoặc biến động tự nhiên.
+    
+    Args:
+        df: DataFrame chứa điểm
+        noise_std: Độ lệch chuẩn của nhiễu (default: 0.3)
+    Returns:
+        DataFrame đã thêm nhiễu
+    """
+    for col in FEATURE_NAMES:
+        noise = np.random.normal(0, noise_std, len(df))
+        df[col] = (df[col] + noise).clip(3, 10)  # Giữ trong khoảng [3, 10]
+    return df
+
+
+def apply_label_noise(df, noise_rate=LABEL_NOISE_RATE):
+    """
+    Gán nhãn ngẫu nhiên cho một tỷ lệ mẫu.
+    Mô phỏng học sinh chọn ngành không theo điểm mạnh (thực tế phổ biến).
+    Ví dụ: học sinh giỏi Toán+Tin nhưng chọn Y khoa vì đam mê.
+    
+    Args:
+        df: DataFrame chứa dữ liệu
+        noise_rate: Tỷ lệ mẫu bị đổi nhãn (default: 8%)
+    Returns:
+        DataFrame đã thêm label noise
+    """
+    n_noisy = int(len(df) * noise_rate)
+    noisy_indices = np.random.choice(df.index, size=n_noisy, replace=False)
+    
+    num_classes = len(NGANH_HOC_MAP)
+    for idx in noisy_indices:
+        current_label = df.loc[idx, 'nganh_hoc']
+        # Chọn nhãn ngẫu nhiên KHÁC nhãn hiện tại
+        new_label = np.random.choice([label for label in range(num_classes) if label != current_label])
+        df.loc[idx, 'nganh_hoc'] = new_label
+    
+    logger.info(f"  Đã thêm label noise: {n_noisy}/{len(df)} mẫu ({noise_rate*100:.1f}%)")
+    return df
+
+
+def generate_synthetic_data(num_samples=NUM_SAMPLES, output_file=DATA_PATH, balance=False, class_ratios=None,
+                            add_noise=True, add_label_noise=True):
     """
     Tạo dữ liệu tổng hợp cho hệ thống AI gợi ý ngành học.
     
@@ -127,6 +167,8 @@ def generate_synthetic_data(num_samples=NUM_SAMPLES, output_file=DATA_PATH, bala
         balance (bool): Nếu True, dữ liệu sẽ cân bằng hoàn hảo (12.5% mỗi ngành)
         class_ratios (list): Danh sách tỷ lệ (%) cho mỗi ngành, tổng = 100. 
                             Nếu None và balance=False, sẽ dùng tỷ lệ không cân bằng 12-13%
+        add_noise (bool): Thêm nhiễu Gaussian vào features (default: True)
+        add_label_noise (bool): Thêm label noise (default: True)
     
     Returns:
         pd.DataFrame: DataFrame chứa dữ liệu được tạo
@@ -190,6 +232,15 @@ def generate_synthetic_data(num_samples=NUM_SAMPLES, output_file=DATA_PATH, bala
     # Nối tất cả dữ liệu và xáo trộn (shuffle)
     data = pd.concat(collected_data, ignore_index=True)
     data = data.sample(frac=1, random_state=42).reset_index(drop=True)
+    
+    # === THÊM NOISE ĐỂ DỮ LIỆU THỰC TẾ HƠN ===
+    if add_noise:
+        logger.info(f"\n Thêm feature noise (std={FEATURE_NOISE_STD})...")
+        data = apply_feature_noise(data)
+    
+    if add_label_noise:
+        logger.info(f" Thêm label noise ({LABEL_NOISE_RATE*100:.0f}%)...")
+        data = apply_label_noise(data)
     
     # Validation dữ liệu
     if data.isnull().sum().sum() > 0:

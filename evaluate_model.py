@@ -7,7 +7,7 @@ import pickle
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report, confusion_matrix
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report
 import logging
 from config import DATA_PATH, NGANH_HOC_MAP, MODEL_PATH, FEATURE_NAMES
 from hybrid_engine import get_hybrid_advice
@@ -34,13 +34,13 @@ def evaluate_ml_only(model, X_test, y_test):
     recall_macro = recall_score(y_test, y_pred, average='macro')
     f1_macro = f1_score(y_test, y_pred, average='macro')
     
-    logger.info(f"\n📊 Kết quả tổng hợp:")
+    logger.info("\n📊 Kết quả tổng hợp:")
     logger.info(f"   Accuracy:  {accuracy:.4f} ({accuracy*100:.2f}%)")
     logger.info(f"   Precision: {precision_macro:.4f} ({precision_macro*100:.2f}%)")
     logger.info(f"   Recall:    {recall_macro:.4f} ({recall_macro*100:.2f}%)")
     logger.info(f"   F1 Score:  {f1_macro:.4f}")
     
-    logger.info(f"\n📈 Chi tiết theo ngành:")
+    logger.info("\n📈 Chi tiết theo ngành:")
     report = classification_report(y_test, y_pred, target_names=MAJOR_NAMES, digits=4, output_dict=True)
     print_classification_report(report, MAJOR_NAMES)
     
@@ -55,13 +55,13 @@ def evaluate_ml_only(model, X_test, y_test):
 
 
 def evaluate_hybrid_system(model, X_test, y_test):
-    """Đánh giá hệ thống Hybrid (ML + Fuzzy)"""
+    """Đánh giá hệ thống Hybrid (ML + KBS)"""
     logger.info("\n" + "="*70)
-    logger.info("2️⃣  ĐÁNH GIÁ HYBRID SYSTEM (ML + FUZZY LOGIC)")
+    logger.info("2️⃣  ĐÁNH GIÁ HYBRID SYSTEM (ML + KBS)")
     logger.info("="*70)
     
     y_pred_hybrid = []
-    fuzzy_scores = []
+    hybrid_scores = []
     
     logger.info(f"\n⏳ Đang dự đoán {len(X_test)} mẫu...")
     for idx, (i, row) in enumerate(X_test.iterrows()):
@@ -84,7 +84,7 @@ def evaluate_hybrid_system(model, X_test, y_test):
                     best_major = major_idx
         
         y_pred_hybrid.append(best_major)
-        fuzzy_scores.append(max_score)
+        hybrid_scores.append(max_score)
     
     y_pred_hybrid = np.array(y_pred_hybrid)
     
@@ -94,14 +94,14 @@ def evaluate_hybrid_system(model, X_test, y_test):
     recall_macro = recall_score(y_test, y_pred_hybrid, average='macro')
     f1_macro = f1_score(y_test, y_pred_hybrid, average='macro')
     
-    logger.info(f"\n📊 Kết quả tổng hợp:")
+    logger.info("\n📊 Kết quả tổng hợp:")
     logger.info(f"   Accuracy:  {accuracy:.4f} ({accuracy*100:.2f}%)")
     logger.info(f"   Precision: {precision_macro:.4f} ({precision_macro*100:.2f}%)")
     logger.info(f"   Recall:    {recall_macro:.4f} ({recall_macro*100:.2f}%)")
     logger.info(f"   F1 Score:  {f1_macro:.4f}")
-    logger.info(f"   Avg Fuzzy Score: {np.mean(fuzzy_scores):.2f}%")
+    logger.info(f"   Avg Hybrid Score: {np.mean(hybrid_scores):.2f}%")
     
-    logger.info(f"\n📈 Chi tiết theo ngành:")
+    logger.info("\n📈 Chi tiết theo ngành:")
     report = classification_report(y_test, y_pred_hybrid, target_names=MAJOR_NAMES, digits=4, output_dict=True)
     print_classification_report(report, MAJOR_NAMES)
     
@@ -111,7 +111,7 @@ def evaluate_hybrid_system(model, X_test, y_test):
         'recall': recall_macro,
         'f1': f1_macro,
         'y_pred': y_pred_hybrid,
-        'fuzzy_scores': fuzzy_scores,
+        'hybrid_scores': hybrid_scores,
         'report': report
     }
 
@@ -165,25 +165,25 @@ def compare_ml_vs_hybrid(ml_results, hybrid_results):
 
 
 def analyze_prediction_confidence(ml_preds, hybrid_scores, y_test):
-    """Phân tích độ tin cậy của Fuzzy Logic"""
+    """Phân tích độ tin cậy của Hybrid System"""
     logger.info("\n" + "="*70)
-    logger.info("4️⃣  PHÂN TÍCH ĐỘ TIN CẬY FUZZY LOGIC")
+    logger.info("4️⃣  PHÂN TÍCH ĐỘ TIN CẬY HYBRID SYSTEM")
     logger.info("="*70)
     
     correct_mask = ml_preds == y_test
     high_confidence = np.array(hybrid_scores) >= 70
     
-    logger.info(f"\n📊 Thống kê:")
+    logger.info("\n📊 Thống kê:")
     logger.info(f"   Dự đoán đúng (ML): {correct_mask.sum()}/{len(y_test)} ({correct_mask.sum()/len(y_test)*100:.2f}%)")
-    logger.info(f"   Fuzzy score >= 70%: {high_confidence.sum()}/{len(hybrid_scores)} ({high_confidence.sum()/len(hybrid_scores)*100:.2f}%)")
+    logger.info(f"   Hybrid score >= 70%: {high_confidence.sum()}/{len(hybrid_scores)} ({high_confidence.sum()/len(hybrid_scores)*100:.2f}%)")
     
-    # Tỉ lệ dự đoán đúng khi Fuzzy confidence cao
+    # Tỉ lệ dự đoán đúng khi Hybrid confidence cao
     correct_high_conf = (correct_mask & high_confidence).sum()
     if high_confidence.sum() > 0:
         accuracy_high_conf = correct_high_conf / high_confidence.sum()
-        logger.info(f"   Độ chính xác khi Fuzzy >= 70%: {accuracy_high_conf:.4f} ({accuracy_high_conf*100:.2f}%)")
+        logger.info(f"   Độ chính xác khi Hybrid >= 70%: {accuracy_high_conf:.4f} ({accuracy_high_conf*100:.2f}%)")
     
-    logger.info(f"\n📈 Phân phối Fuzzy Scores:")
+    logger.info("\n📈 Phân phối Hybrid Scores:")
     for threshold in [50, 60, 70, 80, 90]:
         count = (np.array(hybrid_scores) >= threshold).sum()
         logger.info(f"   Score >= {threshold}%: {count:5d} ({count/len(hybrid_scores)*100:5.2f}%)")
@@ -220,10 +220,10 @@ def main():
         hybrid_results = evaluate_hybrid_system(model, X_test, y_test)
         
         # 5. Compare
-        improvements = compare_ml_vs_hybrid(ml_results, hybrid_results)
+        compare_ml_vs_hybrid(ml_results, hybrid_results)
         
         # 6. Analyze confidence
-        analyze_prediction_confidence(ml_results['y_pred'], hybrid_results['fuzzy_scores'], y_test.values)
+        analyze_prediction_confidence(ml_results['y_pred'], hybrid_results['hybrid_scores'], y_test.values)
         
         # 7. Summary
         logger.info("\n" + "="*70)
@@ -237,9 +237,9 @@ def main():
         if hybrid_acc > ml_acc:
             logger.info(f"✅ Sử dụng Hybrid System - cải thiện {(hybrid_acc-ml_acc)*100:.2f}%")
         else:
-            logger.info(f"⚠️ ML thuần vẫn tốt hơn - xem xét điều chỉnh Fuzzy rules")
+            logger.info("⚠️ ML thuần vẫn tốt hơn - xem xét điều chỉnh KBS rules")
         
-        logger.info("\nChi tiết lưu trong 'hybrid_evaluation_report.log'")
+        logger.info("\nChi tiết lưu trong log")
         
     except Exception as e:
         logger.error(f"❌ Lỗi: {e}")

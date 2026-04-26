@@ -1,0 +1,352 @@
+{
+    "version": "1.3",
+    "description": "Cấu hình luật chuyên gia cho Hybrid KBS - Có thể chỉnh sửa mà không cần thay đổi code",
+    
+    "base_rules": {
+        "0_IT": {
+            "major_name": "IT",
+            "rules": [
+                {
+                    "name": "IT_Very_Fit",
+                    "description": "Rất phù hợp IT",
+                    "thresholds": {"toan": 8, "tin_hoc": 8, "ly": 7},
+                    "operator": "AND",
+                    "score": 95,
+                    "specificity": 3,
+                    "reason": "Toán, Tin, Lý đều xuất sắc"
+                },
+                {
+                    "name": "IT_Fit",
+                    "description": "Khá phù hợp IT",
+                    "thresholds": {"toan": 7, "tin_hoc": 7, "ly": 6, "anh": 5},
+                    "operator": "AND",
+                    "score": 80,
+                    "specificity": 4,
+                    "reason": "Đáp ứng yêu cầu cơ bản, có khả năng teamwork"
+                },
+                {
+                    "name": "IT_Medium",
+                    "description": "Trung bình IT",
+                    "thresholds": {"toan": 7, "tin_hoc": 6.5},
+                    "operator": "AND",
+                    "score": 65,
+                    "specificity": 2,
+                    "reason": "Có tiềm năng nhưng cần cải thiện"
+                },
+                {
+                    "name": "IT_Not_Fit",
+                    "description": "Không phù hợp IT",
+                    "thresholds": {"toan": 6, "tin_hoc": 6},
+                    "operator": "OR_LESS_THAN",
+                    "score": 20,
+                    "specificity": 1,
+                    "reason": "Thiếu kỹ năng cơ bản"
+                }
+            ]
+        },
+        "1_KinhTe": {
+            "major_name": "Kinh tế",
+            "rules": [
+                {
+                    "name": "KinhTe_Very_Fit",
+                    "description": "Rất phù hợp Kinh tế",
+                    "thresholds": {"anh": 8, "toan": 7.5, "van": 7},
+                    "operator": "AND",
+                    "score": 90,
+                    "specificity": 3,
+                    "reason": "Anh, Toán, Văn đều tốt"
+                },
+                {
+                    "name": "KinhTe_Fit",
+                    "description": "Khá phù hợp Kinh tế",
+                    "thresholds": {"anh": 7, "toan": 6.5, "van": 6.5},
+                    "operator": "AND",
+                    "score": 75,
+                    "specificity": 3,
+                    "reason": "Đáp ứng yêu cầu"
+                },
+                {
+                    "name": "KinhTe_Medium",
+                    "description": "Trung bình Kinh tế",
+                    "thresholds": {"anh": 6.5, "toan": 6},
+                    "operator": "AND",
+                    "score": 55,
+                    "specificity": 2,
+                    "reason": "Có khả năng nhưng yếu về Anh"
+                },
+                {
+                    "name": "KinhTe_Not_Fit",
+                    "description": "Không phù hợp Kinh tế",
+                    "thresholds": {"anh": 6, "toan": 5.5},
+                    "operator": "OR_LESS_THAN",
+                    "score": 15,
+                    "specificity": 1,
+                    "reason": "Kỹ năng không đủ"
+                }
+            ]
+        },
+        "2_YKhoa": {
+            "major_name": "Y khoa",
+            "rules": [
+                {
+                    "name": "YKhoa_Very_Fit",
+                    "thresholds": {"sinh": 8.5, "hoa": 8, "van": 7},
+                    "operator": "AND",
+                    "score": 95,
+                    "specificity": 3,
+                    "reason": "Sinh, Hóa, Văn đều xuất sắc"
+                },
+                {
+                    "name": "YKhoa_Fit",
+                    "thresholds": {"sinh": 8, "hoa": 7.5, "ly": 6, "van": 6},
+                    "operator": "AND",
+                    "score": 85,
+                    "specificity": 4,
+                    "reason": "Đáp ứng yêu cầu, có nền tảng Lý"
+                },
+                {
+                    "name": "YKhoa_Medium",
+                    "thresholds": {"sinh": 7.5, "hoa": 7},
+                    "operator": "AND",
+                    "score": 65,
+                    "specificity": 2,
+                    "reason": "Có tiềm năng, điểm khá nhưng chưa xuất sắc"
+                },
+                {
+                    "name": "YKhoa_Not_Fit",
+                    "thresholds": {"sinh": 7, "hoa": 6.5},
+                    "operator": "OR_LESS_THAN",
+                    "score": 15,
+                    "specificity": 1,
+                    "reason": "Từ khối khác, không phù hợp"
+                }
+            ]
+        },
+        "3_KyThuat": {
+            "major_name": "Kỹ thuật",
+            "rules": [
+                {
+                    "name": "KyThuat_Very_Fit",
+                    "thresholds": {"toan": 8, "ly": 8, "hoa": 7},
+                    "operator": "AND",
+                    "score": 92,
+                    "specificity": 3,
+                    "reason": "Toán, Lý, Hóa đều xuất sắc"
+                },
+                {
+                    "name": "KyThuat_Fit",
+                    "thresholds": {"toan": 7.5, "ly": 7, "hoa": 6.5, "tin_hoc": 5},
+                    "operator": "AND",
+                    "score": 80,
+                    "specificity": 4,
+                    "reason": "Đáp ứng yêu cầu, có kỹ năng Tin học"
+                },
+                {
+                    "name": "KyThuat_Medium",
+                    "thresholds": {"toan": 7.5, "ly": 6.5},
+                    "operator": "AND",
+                    "score": 65,
+                    "specificity": 2,
+                    "reason": "Có khả năng, Toán tốt nhưng Lý chưa cao"
+                },
+                {
+                    "name": "KyThuat_Not_Fit",
+                    "thresholds": {"toan": 6.5, "ly": 6},
+                    "operator": "OR_LESS_THAN",
+                    "score": 18,
+                    "specificity": 1,
+                    "reason": "Thiếu nền tảng cơ bản"
+                }
+            ]
+        },
+        "4_NongLamNgu": {
+            "major_name": "Nông-Lâm-Ngư",
+            "rules": [
+                {
+                    "name": "NongLamNgu_Very_Fit",
+                    "thresholds": {"sinh": 8, "hoa": 7.5, "dia_ly": 7},
+                    "operator": "AND",
+                    "score": 88,
+                    "specificity": 3,
+                    "reason": "Sinh, Hóa, Địa lý đều tốt"
+                },
+                {
+                    "name": "NongLamNgu_Fit",
+                    "thresholds": {"sinh": 7.5, "hoa": 7, "dia_ly": 6, "toan": 5.5},
+                    "operator": "AND",
+                    "score": 72,
+                    "specificity": 4,
+                    "reason": "Đáp ứng yêu cầu, có kỹ năng tính toán"
+                },
+                {
+                    "name": "NongLamNgu_Medium",
+                    "thresholds": {"sinh": 7, "dia_ly": 7},
+                    "operator": "AND",
+                    "score": 65,
+                    "specificity": 2,
+                    "reason": "Có khả năng, Địa lý tốt"
+                },
+                {
+                    "name": "NongLamNgu_Not_Fit",
+                    "thresholds": {"sinh": 6.5, "hoa": 5.5},
+                    "operator": "OR_LESS_THAN",
+                    "score": 18,
+                    "specificity": 1,
+                    "reason": "Kỹ năng không đủ"
+                }
+            ]
+        },
+        "5_SuPham": {
+            "major_name": "Sư phạm",
+            "rules": [
+                {
+                    "name": "SuPham_Very_Fit",
+                    "thresholds": {"van": 8, "anh": 7.5, "lich_su": 7},
+                    "operator": "AND",
+                    "score": 90,
+                    "specificity": 3,
+                    "reason": "Văn, Anh, Lịch sử đều xuất sắc"
+                },
+                {
+                    "name": "SuPham_Fit",
+                    "thresholds": {"van": 7, "anh": 7, "lich_su": 6.5},
+                    "operator": "AND",
+                    "score": 75,
+                    "specificity": 3,
+                    "reason": "Đáp ứng yêu cầu, có năng lực truyền đạt"
+                },
+                {
+                    "name": "SuPham_Medium",
+                    "thresholds": {"van": 6.5, "anh": 6.5},
+                    "operator": "AND",
+                    "score": 60,
+                    "specificity": 2,
+                    "reason": "Có khả năng, cần cải thiện kỹ năng mềm"
+                },
+                {
+                    "name": "SuPham_Not_Fit",
+                    "thresholds": {"van": 6, "anh": 5.5},
+                    "operator": "OR_LESS_THAN",
+                    "score": 15,
+                    "specificity": 1,
+                    "reason": "Thiếu kỹ năng truyền đạt"
+                }
+            ]
+        },
+        "6_Luat": {
+            "major_name": "Luật",
+            "rules": [
+                {
+                    "name": "Luat_Very_Fit",
+                    "thresholds": {"van": 8, "lich_su": 8, "anh": 7},
+                    "operator": "AND",
+                    "score": 90,
+                    "specificity": 3,
+                    "reason": "Văn, Lịch sử, Anh đều xuất sắc"
+                },
+                {
+                    "name": "Luat_Fit",
+                    "thresholds": {"van": 7, "lich_su": 7, "anh": 6.5},
+                    "operator": "AND",
+                    "score": 75,
+                    "specificity": 3,
+                    "reason": "Đáp ứng yêu cầu, có tư duy phản biện"
+                },
+                {
+                    "name": "Luat_Medium",
+                    "thresholds": {"van": 6.5, "lich_su": 6.5},
+                    "operator": "AND",
+                    "score": 60,
+                    "specificity": 2,
+                    "reason": "Có khả năng, cần rèn luyện kỹ năng lập luận"
+                },
+                {
+                    "name": "Luat_Not_Fit",
+                    "thresholds": {"van": 6, "lich_su": 5.5},
+                    "operator": "OR_LESS_THAN",
+                    "score": 15,
+                    "specificity": 1,
+                    "reason": "Thiếu kỹ năng lập luận"
+                }
+            ]
+        },
+        "7_DuLich": {
+            "major_name": "Du lịch",
+            "rules": [
+                {
+                    "name": "DuLich_Very_Fit",
+                    "thresholds": {"anh": 8, "dia_ly": 7.5, "van": 8},
+                    "operator": "AND",
+                    "score": 88,
+                    "specificity": 3,
+                    "reason": "Anh, Địa lý, Văn xuất sắc"
+                },
+                {
+                    "name": "DuLich_Fit",
+                    "thresholds": {"anh": 7.5, "dia_ly": 7, "toan": 5.5},
+                    "operator": "AND",
+                    "score": 78,
+                    "specificity": 3,
+                    "reason": "Kỹ năng giao tiếp quốc tế, có khả năng tính toán"
+                },
+                {
+                    "name": "DuLich_Medium",
+                    "thresholds": {"anh": 6.5, "dia_ly": 6.5, "van": 6},
+                    "operator": "AND",
+                    "score": 68,
+                    "specificity": 3,
+                    "reason": "Có khả năng, Văn khá"
+                },
+                {
+                    "name": "DuLich_Not_Fit",
+                    "thresholds": {"anh": 6.5, "dia_ly": 5.5},
+                    "operator": "OR_LESS_THAN",
+                    "score": 15,
+                    "specificity": 1,
+                    "reason": "Yếu kỹ năng giao tiếp"
+                }
+            ]
+        }
+    },
+
+    "chaining_rules": {
+        "0_IT": [
+            {"name": "IT_Quoc_Te", "requires": ["IT_Very_Fit", "IT_Fit"], "threshold": {"anh": 7}, "bonus": 3, "reason": "Phù hợp IT Quốc tế (Anh tốt)"},
+            {"name": "IT_TinSinhHoc", "requires": ["IT_Very_Fit", "IT_Fit"], "threshold": {"sinh": 7}, "bonus": 2, "reason": "Tiềm năng Tin Sinh học (Sinh tốt)"}
+        ],
+        "1_KinhTe": [
+            {"name": "KinhTe_So", "requires": ["KinhTe_Very_Fit", "KinhTe_Fit"], "threshold": {"tin_hoc": 6}, "bonus": 3, "reason": "Phù hợp Kinh tế số (có nền Tin học)"}
+        ],
+        "2_YKhoa": [
+            {"name": "YKhoa_QuocTe", "requires": ["YKhoa_Very_Fit", "YKhoa_Fit"], "threshold": {"anh": 7.5}, "bonus": 3, "reason": "Phù hợp Y khoa Quốc tế (Anh xuất sắc)"},
+            {"name": "YKhoa_NghienCuu", "requires": ["YKhoa_Very_Fit"], "threshold": {"toan": 7.5}, "bonus": 2, "reason": "Tiềm năng Nghiên cứu Y học (Toán tốt)"}
+        ],
+        "3_KyThuat": [
+            {"name": "KyThuat_CongNghe", "requires": ["KyThuat_Very_Fit", "KyThuat_Fit"], "threshold": {"tin_hoc": 7}, "bonus": 3, "reason": "Phù hợp Kỹ thuật Công nghệ (Tin học tốt)"}
+        ],
+        "4_NongLamNgu": [
+            {"name": "NongLam_CongNghe", "requires": ["NongLamNgu_Very_Fit", "NongLamNgu_Fit"], "threshold": {"tin_hoc": 6}, "bonus": 2, "reason": "Tiềm năng Nông nghiệp công nghệ cao"}
+        ],
+        "5_SuPham": [
+            {"name": "SuPham_QuocTe", "requires": ["SuPham_Very_Fit"], "threshold": {"anh": 8}, "bonus": 3, "reason": "Phù hợp Giáo dục Quốc tế (Anh xuất sắc)"}
+        ],
+        "6_Luat": [
+            {"name": "Luat_QuocTe", "requires": ["Luat_Very_Fit", "Luat_Fit"], "threshold": {"anh": 7.5}, "bonus": 3, "reason": "Phù hợp Luật Quốc tế (Anh tốt)"}
+        ],
+        "7_DuLich": [
+            {"name": "DuLich_QuocTe", "requires": ["DuLich_Very_Fit", "DuLich_Fit"], "threshold": {"anh": 8, "dia_ly": 8}, "bonus": 3, "reason": "Phù hợp Du lịch Quốc tế (Anh và Địa xuất sắc)"}
+        ]
+    },
+
+    "conflict_resolution": {
+        "strategy": "specificity_then_score",
+        "description": "Ưu tiên luật có nhiều điều kiện hơn (specificity cao), sau đó ưu tiên điểm cao hơn"
+    },
+
+    "default_score": 30,
+    "max_score": 100,
+    "weights": {
+        "ml_weight": 0.6,
+        "kbs_weight": 0.4
+    }
+}
