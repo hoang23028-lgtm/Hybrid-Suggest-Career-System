@@ -1,471 +1,140 @@
-﻿
+
+import json
+from pathlib import Path
+from config import (
+    MAJOR_NAMES as _MAJOR_NAMES,
+    KHTN_FEATURES as _KHTN_FEATURES,
+    KHXH_FEATURES as _KHXH_FEATURES,
+    KHTN_MAJORS, KHXH_MAJORS,
+    get_features, get_majors, get_major_names
+)
+
+
+def _load_rules_config():
+    """Load luật từ rules_config.json"""
+    config_path = Path(__file__).parent / 'rules_config.json'
+    with open(config_path, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+
+def _build_condition(thresholds, operator, feature_index):
+    """
+    Chuyển đổi thresholds + operator từ JSON thành callable condition.
+    
+    Operators:
+        AND: tất cả feature >= threshold
+        OR_LESS_THAN: bất kỳ feature nào < threshold (dùng cho Not_Fit rules)
+    """
+    checks = []
+    for feat_name, threshold in thresholds.items():
+        idx = feature_index[feat_name]
+        checks.append((idx, threshold))
+    
+    if operator == 'AND':
+        return lambda s, _checks=checks: all(s[i] >= t for i, t in _checks)
+    elif operator == 'OR_LESS_THAN':
+        return lambda s, _checks=checks: any(s[i] < t for i, t in _checks)
+    else:
+        raise ValueError(f"Unknown operator: {operator}")
+
+
+def _build_chain_condition(threshold_dict, feature_index):
+    """Chuyển đổi chain threshold từ JSON thành callable (AND logic)."""
+    checks = []
+    for feat_name, threshold in threshold_dict.items():
+        idx = feature_index[feat_name]
+        checks.append((idx, threshold))
+    return lambda s, _checks=checks: all(s[i] >= t for i, t in _checks)
+
+
 class KnowledgeRuleEngine:
     """
     Engine thực thi các luật tri thức chuyên gia
+    Phiên bản 3.0: Hỗ trợ 2 khối KHTN/KHXH
     
-    Attributes:
-        MAJOR_NAMES: Tên 8 ngành
-        FEATURE_NAMES: Tên 9 môn học
-        rules: Dict chứa luật cho mỗi ngành
+    Args:
+        block (str): 'khtn' hoặc 'khxh'
     """
     
-    MAJOR_NAMES = [
-        'IT', 'Kinh tế', 'Y khoa', 'Kỹ thuật',
-        'Nông-Lâm-Ngư', 'Sư phạm', 'Luật', 'Du lịch'
-    ]
+    MAJOR_NAMES = _MAJOR_NAMES
     
-    FEATURE_NAMES = [
-        'Toán', 'Lý', 'Hóa', 'Sinh', 'Văn', 'Anh', 'Lịch sử', 'Địa lý', 'Tin'
-    ]
-    
-    # Các môn chính liên quan đến từng ngành (dùng để phá hòa khi điểm bằng nhau)
-    MAJOR_KEY_SUBJECTS = {
-        0: [0, 8, 1],    # IT: Toán, Tin, Lý
-        1: [0, 5, 4],    # Kinh tế: Toán, Anh, Văn
-        2: [3, 2, 1],    # Y khoa: Sinh, Hóa, Lý
-        3: [0, 1, 2],    # Kỹ thuật: Toán, Lý, Hóa
-        4: [3, 7, 2],    # Nông-Lâm-Ngư: Sinh, Địa lý, Hóa
-        5: [4, 5, 6],    # Sư phạm: Văn, Anh, Lịch sử
-        6: [4, 6, 5],    # Luật: Văn, Lịch sử, Anh
-        7: [5, 7, 4],    # Du lịch: Anh, Địa lý, Văn
+    # Các môn chính liên quan đến từng ngành (index trong feature list của khối)
+    # KHTN features: [toan, van, anh, ly, hoa, sinh] → index 0-5
+    KHTN_KEY_SUBJECTS = {
+        0: [0, 3, 2],    # IT: Toán, Lý, Anh
+        1: [0, 2, 1],    # Kinh tế: Toán, Anh, Văn
+        2: [5, 4, 3],    # Y khoa: Sinh, Hóa, Lý
+        3: [0, 3, 4],    # Kỹ thuật: Toán, Lý, Hóa
+        4: [5, 4, 0],    # Nông-Lâm: Sinh, Hóa, Toán
     }
     
-    def __init__(self):
-        """Khởi tạo và định nghĩa luật"""
-        self.rules = self._define_all_rules()
-        self.chaining_rules = self._define_chaining_rules()
+    # KHXH features: [toan, van, anh, lich_su, dia_ly, gdcd] → index 0-5
+    KHXH_KEY_SUBJECTS = {
+        1: [0, 2, 1],    # Kinh tế: Toán, Anh, Văn
+        5: [1, 2, 3],    # Sư phạm: Văn, Anh, Lịch sử
+        6: [5, 3, 1],    # Luật: GDCD, Lịch sử, Văn
+        7: [2, 4, 1],    # Du lịch: Anh, Địa lý, Văn
+    }
     
-    # ==================== FORWARD CHAINING RULES ====================
-    def _define_chaining_rules(self):
-        """
-        Định nghĩa luật suy luận chuỗi (Forward Chaining)
-        Khi luật cơ sở đã khớp, kiểm tra thêm điều kiện để suy ra kết luận mới.
+    def __init__(self, block='khtn'):
+        """Khởi tạo: load luật từ rules_config.json theo khối"""
+        self.block = block
+        self.feature_names = get_features(block)
+        self.feature_index = {name: idx for idx, name in enumerate(self.feature_names)}
+        self.major_indices = get_majors(block)
+        self.major_names_block = get_major_names(block)
         
-        Cấu trúc: {
-            major_index: [
-                {
-                    'name': tên luật chain,
-                    'requires': luật cơ sở cần khớp trước,
-                    'condition': điều kiện bổ sung,
-                    'bonus': điểm cộng thêm,
-                    'reason': lý do
-                }
-            ]
-        }
-        """
-        return {
-            # IT: Suy luận chuỗi
-            0: [
-                {
-                    'name': 'IT_Quoc_Te',
-                    'requires': ['IT_Very_Fit', 'IT_Fit'],
-                    'condition': lambda s: s[5] >= 7,      # Anh >= 7
-                    'bonus': 3,
-                    'reason': 'Phù hợp IT Quốc tế (Anh tốt)'
-                },
-                {
-                    'name': 'IT_TinSinhHoc',
-                    'requires': ['IT_Very_Fit', 'IT_Fit'],
-                    'condition': lambda s: s[3] >= 7,      # Sinh >= 7
-                    'bonus': 2,
-                    'reason': 'Tiềm năng Tin Sinh học (Sinh tốt)'
-                },
-            ],
-            # Kinh tế: Suy luận chuỗi
-            1: [
-                {
-                    'name': 'KinhTe_So',
-                    'requires': ['KinhTe_Very_Fit', 'KinhTe_Fit'],
-                    'condition': lambda s: s[8] >= 6,      # Tin >= 6
-                    'bonus': 3,
-                    'reason': 'Phù hợp Kinh tế số (có nền Tin học)'
-                },
-            ],
-            # Y khoa: Suy luận chuỗi
-            2: [
-                {
-                    'name': 'YKhoa_QuocTe',
-                    'requires': ['YKhoa_Very_Fit', 'YKhoa_Fit'],
-                    'condition': lambda s: s[5] >= 7.5,    # Anh >= 7.5
-                    'bonus': 3,
-                    'reason': 'Phù hợp Y khoa Quốc tế (Anh xuất sắc)'
-                },
-                {
-                    'name': 'YKhoa_NghienCuu',
-                    'requires': ['YKhoa_Very_Fit'],
-                    'condition': lambda s: s[0] >= 7.5,    # Toán >= 7.5
-                    'bonus': 2,
-                    'reason': 'Tiềm năng Nghiên cứu Y học (Toán tốt)'
-                },
-            ],
-            # Kỹ thuật: Suy luận chuỗi
-            3: [
-                {
-                    'name': 'KyThuat_CongNghe',
-                    'requires': ['KyThuat_Very_Fit', 'KyThuat_Fit'],
-                    'condition': lambda s: s[8] >= 7,      # Tin >= 7
-                    'bonus': 3,
-                    'reason': 'Phù hợp Kỹ thuật Công nghệ (Tin học tốt)'
-                },
-            ],
-            # Nông-Lâm-Ngư: Suy luận chuỗi
-            4: [
-                {
-                    'name': 'NongLam_CongNghe',
-                    'requires': ['NongLamNgu_Very_Fit', 'NongLamNgu_Fit'],
-                    'condition': lambda s: s[8] >= 6,      # Tin >= 6
-                    'bonus': 2,
-                    'reason': 'Tiềm năng Nông nghiệp công nghệ cao'
-                },
-            ],
-            # Sư phạm: Suy luận chuỗi
-            5: [
-                {
-                    'name': 'SuPham_QuocTe',
-                    'requires': ['SuPham_Very_Fit'],
-                    'condition': lambda s: s[5] >= 8,      # Anh >= 8
-                    'bonus': 3,
-                    'reason': 'Phù hợp Giáo dục Quốc tế (Anh xuất sắc)'
-                },
-            ],
-            # Luật: Suy luận chuỗi
-            6: [
-                {
-                    'name': 'Luat_QuocTe',
-                    'requires': ['Luat_Very_Fit', 'Luat_Fit'],
-                    'condition': lambda s: s[5] >= 7.5,    # Anh >= 7.5
-                    'bonus': 3,
-                    'reason': 'Phù hợp Luật Quốc tế (Anh tốt)'
-                },
-            ],
-            # Du lịch: Suy luận chuỗi
-            7: [
-                {
-                    'name': 'DuLich_QuocTe',
-                    'requires': ['DuLich_Very_Fit', 'DuLich_Fit'],
-                    'condition': lambda s: s[5] >= 8 and s[7] >= 8,  # Anh >= 8 và Địa >= 8
-                    'bonus': 3,
-                    'reason': 'Phù hợp Du lịch Quốc tế (Anh và Địa xuất sắc)'
-                },
-            ],
-        }
+        config = _load_rules_config()
+        
+        rules_key = 'khtn_rules' if block == 'khtn' else 'khxh_rules'
+        chaining_key = block  # 'khtn' hoặc 'khxh'
+        
+        self.rules = self._load_base_rules(config[rules_key])
+        self.chaining_rules = self._load_chaining_rules(
+            config['chaining_rules'].get(chaining_key, {})
+        )
+        self._default_score = config.get('default_score', 10)
+        self._max_score = config.get('max_score', 100)
     
-    def _define_all_rules(self):
-        """Định nghĩa 32 luật cho 8 ngành"""
-        return {
-            0: self._rules_IT(),
-            1: self._rules_KinhTe(),
-            2: self._rules_YKhoa(),
-            3: self._rules_KyThuat(),
-            4: self._rules_NongLamNgu(),
-            5: self._rules_SuPham(),
-            6: self._rules_Luat(),
-            7: self._rules_DuLich()
-        }
+    # ==================== LOAD RULES FROM JSON ====================
+    def _load_base_rules(self, base_rules_json):
+        """Load luật cơ sở từ JSON, chuyển thresholds thành lambda conditions"""
+        rules = {}
+        for key, major_data in base_rules_json.items():
+            major_index = int(key.split('_')[0])
+            major_rules = []
+            for rule_json in major_data['rules']:
+                major_rules.append({
+                    'name': rule_json['name'],
+                    'description': rule_json.get('description', ''),
+                    'condition': _build_condition(
+                        rule_json['thresholds'], rule_json['operator'], self.feature_index
+                    ),
+                    'score': rule_json['score'],
+                    'specificity': rule_json['specificity'],
+                    'reason': rule_json['reason']
+                })
+            rules[major_index] = major_rules
+        return rules
     
-    # ==================== IT (Công Nghệ Thông Tin) ====================
-    def _rules_IT(self):
-        """4 luật cho IT"""
-        return [
-            {
-                'name': 'IT_Very_Fit',
-                'description': 'Rất phù hợp IT',
-                'condition': lambda s: s[0]>=8 and s[8]>=8 and s[1]>=7,
-                'score': 95,
-                'specificity': 3,
-                'reason': 'Toán, Tin, Lý đều xuất sắc'
-            },
-            {
-                'name': 'IT_Fit',
-                'description': 'Khá phù hợp IT',
-                'condition': lambda s: s[0]>=7 and s[8]>=7 and s[1]>=6 and s[5]>=5,
-                'score': 80,
-                'specificity': 4,
-                'reason': 'Đáp ứng yêu cầu cơ bản, có khả năng teamwork'
-            },
-            {
-                'name': 'IT_Medium',
-                'description': 'Trung bình IT',
-                'condition': lambda s: s[0]>=7 and s[8]>=6.5,
-                'score': 65,
-                'specificity': 2,
-                'reason': 'Có tiềm năng nhưng cần cải thiện'
-            },
-            {
-                'name': 'IT_Not_Fit',
-                'description': 'Không phù hợp IT',
-                'condition': lambda s: s[0]<6 or s[8]<6,
-                'score': 20,
-                'specificity': 1,
-                'reason': 'Thiếu kỹ năng cơ bản'
-            }
-        ]
-    
-    # ==================== Kinh Tế ====================
-    def _rules_KinhTe(self):
-        """4 luật cho Kinh Tế"""
-        return [
-            {
-                'name': 'KinhTe_Very_Fit',
-                'description': 'Rất phù hợp Kinh tế',
-                'condition': lambda s: s[5]>=8 and s[0]>=7.5 and s[4]>=7,
-                'score': 90,
-                'specificity': 3,
-                'reason': 'Anh, Toán, Văn đều tốt'
-            },
-            {
-                'name': 'KinhTe_Fit',
-                'description': 'Khá phù hợp Kinh tế',
-                'condition': lambda s: s[5]>=7 and s[0]>=6.5 and s[4]>=6.5,
-                'score': 75,
-                'specificity': 3,
-                'reason': 'Đáp ứng yêu cầu'
-            },
-            {
-                'name': 'KinhTe_Medium',
-                'description': 'Trung bình Kinh tế',
-                'condition': lambda s: s[5]>=6.5 and s[0]>=6,
-                'score': 55,
-                'specificity': 2,
-                'reason': 'Có khả năng nhưng yếu về Anh'
-            },
-            {
-                'name': 'KinhTe_Not_Fit',
-                'description': 'Không phù hợp Kinh tế',
-                'condition': lambda s: s[5]<6 or s[0]<5.5,
-                'score': 15,
-                'specificity': 1,
-                'reason': 'Kỹ năng không đủ'
-            }
-        ]
-    
-    # ==================== Y Khoa ====================
-    def _rules_YKhoa(self):
-        """4 luật cho Y Khoa"""
-        return [
-            {
-                'name': 'YKhoa_Very_Fit',
-                'description': 'Rất phù hợp Y khoa',
-                'condition': lambda s: s[3]>=8.5 and s[2]>=8 and s[4]>=7,
-                'score': 95,
-                'specificity': 3,
-                'reason': 'Sinh, Hóa, Văn đều xuất sắc'
-            },
-            {
-                'name': 'YKhoa_Fit',
-                'description': 'Khá phù hợp Y khoa',
-                'condition': lambda s: s[3]>=8 and s[2]>=7.5 and s[1]>=6 and s[4]>=6,
-                'score': 85,
-                'specificity': 4,
-                'reason': 'Đáp ứng yêu cầu, có nền tảng Lý'
-            },
-            {
-                'name': 'YKhoa_Medium',
-                'description': 'Trung bình Y khoa',
-                'condition': lambda s: s[3]>=7.5 and s[2]>=7,
-                'score': 65,
-                'specificity': 2,
-                'reason': 'Có tiềm năng, điểm khá nhưng chưa xuất sắc'
-            },
-            {
-                'name': 'YKhoa_Not_Fit',
-                'description': 'Không phù hợp Y khoa',
-                'condition': lambda s: s[3]<7 or s[2]<6.5,
-                'score': 15,
-                'specificity': 1,
-                'reason': 'Từ khối khác, không phù hợp'
-            }
-        ]
-    
-    # ==================== Kỹ Thuật ====================
-    def _rules_KyThuat(self):
-        """4 luật cho Kỹ Thuật"""
-        return [
-            {
-                'name': 'KyThuat_Very_Fit',
-                'description': 'Rất phù hợp Kỹ thuật',
-                'condition': lambda s: s[0]>=8 and s[1]>=8 and s[2]>=7,
-                'score': 92,
-                'specificity': 3,
-                'reason': 'Toán, Lý, Hóa đều xuất sắc'
-            },
-            {
-                'name': 'KyThuat_Fit',
-                'description': 'Khá phù hợp Kỹ thuật',
-                'condition': lambda s: s[0]>=7.5 and s[1]>=7 and s[2]>=6.5 and s[8]>=5,
-                'score': 80,
-                'specificity': 4,
-                'reason': 'Đáp ứng yêu cầu, có kỹ năng Tin học'
-            },
-            {
-                'name': 'KyThuat_Medium',
-                'description': 'Trung bình Kỹ thuật',
-                'condition': lambda s: s[0]>=7.5 and s[1]>=6.5,
-                'score': 65,
-                'specificity': 2,
-                'reason': 'Có khả năng, Toán tốt nhưng Lý chưa cao'
-            },
-            {
-                'name': 'KyThuat_Not_Fit',
-                'description': 'Không phù hợp Kỹ thuật',
-                'condition': lambda s: s[0]<6.5 or s[1]<6,
-                'score': 18,
-                'specificity': 1,
-                'reason': 'Thiếu nền tảng cơ bản'
-            }
-        ]
-    
-    # ==================== Nông-Lâm-Ngư ====================
-    def _rules_NongLamNgu(self):
-        """4 luật cho Nông-Lâm-Ngư"""
-        return [
-            {
-                'name': 'NongLamNgu_Very_Fit',
-                'description': 'Rất phù hợp Nông-Lâm-Ngư',
-                'condition': lambda s: s[3]>=8 and s[2]>=7.5 and s[7]>=7,
-                'score': 88,
-                'specificity': 3,
-                'reason': 'Sinh, Hóa, Địa lý đều tốt'
-            },
-            {
-                'name': 'NongLamNgu_Fit',
-                'description': 'Khá phù hợp Nông-Lâm-Ngư',
-                'condition': lambda s: s[3]>=7.5 and s[2]>=7 and s[7]>=6 and s[0]>=5.5,
-                'score': 72,
-                'specificity': 4,
-                'reason': 'Đáp ứng yêu cầu, có kỹ năng tính toán'
-            },
-            {
-                'name': 'NongLamNgu_Medium',
-                'description': 'Trung bình Nông-Lâm-Ngư',
-                'condition': lambda s: s[3]>=7 and s[7]>=7,
-                'score': 65,
-                'specificity': 2,
-                'reason': 'Có khả năng, Địa lý tốt'
-            },
-            {
-                'name': 'NongLamNgu_Not_Fit',
-                'description': 'Không phù hợp Nông-Lâm-Ngư',
-                'condition': lambda s: s[3]<6.5 or s[2]<5.5,
-                'score': 18,
-                'specificity': 1,
-                'reason': 'Kỹ năng không đủ'
-            }
-        ]
-    
-    # ==================== Sư phạm ====================
-    def _rules_SuPham(self):
-        """4 luật cho Sư phạm"""
-        return [
-            {
-                'name': 'SuPham_Very_Fit',
-                'description': 'Rất phù hợp Sư phạm',
-                'condition': lambda s: s[4]>=8 and s[5]>=7.5 and s[6]>=7,
-                'score': 90,
-                'specificity': 3,
-                'reason': 'Văn, Anh, Lịch sử đều xuất sắc'
-            },
-            {
-                'name': 'SuPham_Fit',
-                'description': 'Khá phù hợp Sư phạm',
-                'condition': lambda s: s[4]>=7 and s[5]>=7 and s[6]>=6.5,
-                'score': 75,
-                'specificity': 3,
-                'reason': 'Đáp ứng yêu cầu, có năng lực truyền đạt'
-            },
-            {
-                'name': 'SuPham_Medium',
-                'description': 'Trung bình Sư phạm',
-                'condition': lambda s: s[4]>=6.5 and s[5]>=6.5,
-                'score': 60,
-                'specificity': 2,
-                'reason': 'Có khả năng, cần cải thiện kỹ năng mềm'
-            },
-            {
-                'name': 'SuPham_Not_Fit',
-                'description': 'Không phù hợp Sư phạm',
-                'condition': lambda s: s[4]<6 or s[5]<5.5,
-                'score': 15,
-                'specificity': 1,
-                'reason': 'Thiếu kỹ năng truyền đạt'
-            }
-        ]
-    
-    # ==================== Luật ====================
-    def _rules_Luat(self):
-        """4 luật cho Luật"""
-        return [
-            {
-                'name': 'Luat_Very_Fit',
-                'description': 'Rất phù hợp Luật',
-                'condition': lambda s: s[4]>=8 and s[6]>=8 and s[5]>=7,
-                'score': 90,
-                'specificity': 3,
-                'reason': 'Văn, Lịch sử, Anh đều xuất sắc'
-            },
-            {
-                'name': 'Luat_Fit',
-                'description': 'Khá phù hợp Luật',
-                'condition': lambda s: s[4]>=7 and s[6]>=7 and s[5]>=6.5,
-                'score': 75,
-                'specificity': 3,
-                'reason': 'Đáp ứng yêu cầu, có tư duy phản biện'
-            },
-            {
-                'name': 'Luat_Medium',
-                'description': 'Trung bình Luật',
-                'condition': lambda s: s[4]>=6.5 and s[6]>=6.5,
-                'score': 60,
-                'specificity': 2,
-                'reason': 'Có khả năng, cần rèn luyện kỹ năng lập luận'
-            },
-            {
-                'name': 'Luat_Not_Fit',
-                'description': 'Không phù hợp Luật',
-                'condition': lambda s: s[4]<6 or s[6]<5.5,
-                'score': 15,
-                'specificity': 1,
-                'reason': 'Thiếu kỹ năng lập luận'
-            }
-        ]
-    
-    # ==================== Du lịch ====================
-    def _rules_DuLich(self):
-        """4 luật cho Du lịch"""
-        return [
-            {
-                'name': 'DuLich_Very_Fit',
-                'description': 'Rất phù hợp Du lịch',
-                'condition': lambda s: s[5]>=8 and s[7]>=7.5 and s[4]>=8,
-                'score': 88,
-                'specificity': 3,
-                'reason': 'Anh, Địa lý, Văn xuất sắc'
-            },
-            {
-                'name': 'DuLich_Fit',
-                'description': 'Khá phù hợp Du lịch',
-                'condition': lambda s: s[5]>=7.5 and s[7]>=7 and s[0]>=5.5,
-                'score': 78,
-                'specificity': 3,
-                'reason': 'Kỹ năng giao tiếp quốc tế, có khả năng tính toán'
-            },
-            {
-                'name': 'DuLich_Medium',
-                'description': 'Trung bình Du lịch',
-                'condition': lambda s: s[5]>=6.5 and s[7]>=6.5 and s[4]>=6,
-                'score': 68,
-                'specificity': 3,
-                'reason': 'Có khả năng, Văn khá'
-            },
-            {
-                'name': 'DuLich_Not_Fit',
-                'description': 'Không phù hợp Du lịch',
-                'condition': lambda s: s[5]<6.5 or s[7]<5.5,
-                'score': 15,
-                'specificity': 1,
-                'reason': 'Yếu kỹ năng giao tiếp'
-            }
-        ]
+    def _load_chaining_rules(self, chaining_json):
+        """Load luật suy luận chuỗi từ JSON"""
+        chaining_rules = {}
+        for key, chains in chaining_json.items():
+            major_index = int(key.split('_')[0])
+            chain_list = []
+            for chain_json in chains:
+                chain_list.append({
+                    'name': chain_json['name'],
+                    'requires': chain_json['requires'],
+                    'condition': _build_chain_condition(
+                        chain_json['threshold'], self.feature_index
+                    ),
+                    'bonus': chain_json['bonus'],
+                    'reason': chain_json['reason']
+                })
+            chaining_rules[major_index] = chain_list
+        return chaining_rules
     
     def calculate_relevance_score(self, user_scores, major_index):
         """
@@ -473,12 +142,13 @@ class KnowledgeRuleEngine:
         Dùng làm tiêu chí phá hòa (tie-breaking) khi KBS score bằng nhau
         
         Args:
-            user_scores (list): [Toán, Lý, Hóa, Sinh, Văn, Anh, LS, DL, Tin]
-            major_index (int): 0-7
+            user_scores (list): 6 điểm theo thứ tự features của khối
+            major_index (int): chỉ số ngành
         Returns:
             float: Điểm trung bình các môn liên quan (0-10)
         """
-        key_subjects = self.MAJOR_KEY_SUBJECTS.get(major_index, [])
+        key_map = self.KHTN_KEY_SUBJECTS if self.block == 'khtn' else self.KHXH_KEY_SUBJECTS
+        key_subjects = key_map.get(major_index, [])
         if not key_subjects:
             return 0.0
         return sum(user_scores[i] for i in key_subjects) / len(key_subjects)
@@ -491,19 +161,12 @@ class KnowledgeRuleEngine:
         Chiến lược (theo thứ tự ưu tiên):
           1. Specificity: Luật có nhiều điều kiện hơn ưu tiên hơn
           2. Score: Điểm cao hơn ưu tiên hơn
-          3. Priority: Luật được định nghĩa trước ưu tiên hơn (thứ tự trong list)
-        
-        Args:
-            matched_rules (list): Danh sách luật đã khớp
-        Returns:
-            dict: Luật được chọn sau giải quyết xung đột
         """
         if not matched_rules:
             return None
         if len(matched_rules) == 1:
             return matched_rules[0]
         
-        # Sắp xếp: specificity giảm dần, sau đó score giảm dần
         sorted_rules = sorted(
             matched_rules,
             key=lambda r: (r.get('specificity', 1), r['score']),
@@ -516,17 +179,6 @@ class KnowledgeRuleEngine:
         """
         Áp dụng suy luận chuỗi (Forward Chaining):
         Nếu luật cơ sở đã khớp → kiểm tra luật chuỗi → cộng thêm điểm bonus
-        
-        Ví dụ: IT_Very_Fit (95) + Anh>=7 → IT_Quốc_Tế (+3) = 98
-        
-        Args:
-            user_scores: điểm 9 môn
-            major_index: chỉ số ngành
-            base_rule_name: tên luật cơ sở đã khớp
-            base_score: điểm từ luật cơ sở
-        Returns:
-            tuple: (final_score, chain_details)
-                chain_details: list các luật chuỗi đã áp dụng
         """
         chain_details = []
         bonus_total = 0
@@ -534,9 +186,7 @@ class KnowledgeRuleEngine:
         chains = self.chaining_rules.get(major_index, [])
         for chain in chains:
             try:
-                # Kiểm tra luật cơ sở có nằm trong danh sách requires không
                 if base_rule_name in chain['requires']:
-                    # Kiểm tra điều kiện bổ sung
                     if chain['condition'](user_scores):
                         bonus_total += chain['bonus']
                         chain_details.append({
@@ -547,7 +197,7 @@ class KnowledgeRuleEngine:
             except Exception:
                 continue
         
-        final_score = min(100, base_score + bonus_total)  # Cap tối đa 100
+        final_score = min(self._max_score, base_score + bonus_total)
         return final_score, chain_details
     
     # ==================== EVALUATE ====================
@@ -555,25 +205,28 @@ class KnowledgeRuleEngine:
         """
         Đánh giá điểm phù hợp dựa trên luật tri thức
         
-        Quy trình:
-          1. Tìm tất cả luật cơ sở khớp
-          2. Giải quyết xung đột (Conflict Resolution) → chọn 1 luật
-          3. Áp dụng suy luận chuỗi (Forward Chaining) → cộng bonus
-        
         Args:
-            user_scores (list): [Toán, Lý, Hóa, Sinh, Văn, Anh, LS, DL, Tin]
-            major_index (int): 0-7 (chỉ số ngành)
+            user_scores (list): 6 điểm theo thứ tự features của khối
+            major_index (int): chỉ số ngành (phải thuộc khối hiện tại)
         Returns:
             dict: {score, rule_name, description, reason, major, relevance_score,
                    chain_applied, chain_details}
         """
         if major_index not in self.rules:
-            return None, None, "Invalid major index"
+            return {
+                'score': self._default_score,
+                'rule_name': 'INVALID',
+                'description': 'Ngành không thuộc khối này',
+                'reason': f'Ngành {major_index} không thuộc khối {self.block.upper()}',
+                'major': self.MAJOR_NAMES[major_index] if major_index < len(self.MAJOR_NAMES) else 'Unknown',
+                'relevance_score': 0,
+                'chain_applied': False,
+                'chain_details': []
+            }
         
         rules = self.rules[major_index]
         matched_rules = []
         
-        # Tính điểm liên quan (tie-breaking)
         relevance_score = self.calculate_relevance_score(user_scores, major_index)
         
         # Bước 1: Tìm tất cả luật cơ sở khớp
@@ -595,7 +248,6 @@ class KnowledgeRuleEngine:
                 user_scores, major_index, best_rule['name'], base_score
             )
             
-            # Tạo reason chi tiết
             reason = best_rule['reason']
             if chain_details:
                 chain_reasons = [c['reason'] for c in chain_details]
@@ -604,7 +256,7 @@ class KnowledgeRuleEngine:
             return {
                 'score': final_score,
                 'rule_name': best_rule['name'],
-                'description': best_rule['description'],
+                'description': best_rule.get('description', ''),
                 'reason': reason,
                 'major': self.MAJOR_NAMES[major_index],
                 'relevance_score': round(relevance_score, 2),
@@ -614,7 +266,7 @@ class KnowledgeRuleEngine:
         
         # Nếu không có luật khớp
         return {
-            'score': 30,
+            'score': self._default_score,
             'rule_name': 'DEFAULT',
             'description': 'Không có luật nào khớp',
             'reason': 'Điểm không đủ tiêu chuẩn',
@@ -626,14 +278,14 @@ class KnowledgeRuleEngine:
 
     def evaluate_all_majors(self, user_scores):
         """
-        Đánh giá cho tất cả 8 ngành
+        Đánh giá cho tất cả ngành trong khối
         Args:
-            user_scores (list): [Toán, Lý, Hóa, Sinh, Văn, Anh, LS, DL, Tin]
+            user_scores (list): 6 điểm theo thứ tự features
         Returns:
             dict: {major_name: result_dict}
         """
         results = {}
-        for i in range(8):
+        for i in self.major_indices:
             results[self.MAJOR_NAMES[i]] = self.evaluate(user_scores, i)
         return results
 
@@ -641,10 +293,6 @@ class KnowledgeRuleEngine:
         """
         Xếp hạng ngành theo điểm phù hợp
         Tie-breaking: khi score bằng nhau, ưu tiên ngành có điểm TB môn liên quan cao hơn
-        Args:
-            user_scores (list): [Toán, Lý, Hóa, Sinh, Văn, Anh, LS, DL, Tin]
-        Returns:
-            list: Danh sách ngành sắp xếp từ cao→ thấp
         """
         results = self.evaluate_all_majors(user_scores)
         sorted_results = sorted(
@@ -665,11 +313,12 @@ class KnowledgeRuleEngine:
 
     def print_ranking(self, user_scores):
         """In kết quả xếp hạng"""
+        display = get_features(self.block)
         ranking = self.get_ranking(user_scores)
-        print("\n" + "="*70)
-        print("KẾT QUẢ ĐÁNH GIÁ NGÀNH (Luật Tri Thức KBS)")
-        print("="*70)
-        print(f"Điểm học sinh: {dict(zip(self.FEATURE_NAMES, user_scores))}")
+        print(f"\n{'='*70}")
+        print(f"KẾT QUẢ ĐÁNH GIÁ NGÀNH - KBS [{self.block.upper()}]")
+        print(f"{'='*70}")
+        print(f"Điểm: {dict(zip(display, user_scores))}")
         print("-"*70)
         for item in ranking:
             print(f"{item['rank']}. {item['major']:15} | Điểm: {item['score']:3.0f}% | "
@@ -680,24 +329,26 @@ class KnowledgeRuleEngine:
 # ==================== EXAMPLE USAGE ====================
 
 if __name__ == "__main__":
-    kbs = KnowledgeRuleEngine()
+    # Test KHTN
+    kbs_khtn = KnowledgeRuleEngine(block='khtn')
     
-    # Test Case 1: Học sinh IT chuyên
-    print("\n### TEST CASE 1: Học sinh IT Chuyên ###")
-    scores_1 = [9, 8, 5, 4, 5, 6, 5, 5, 9.5]
-    kbs.print_ranking(scores_1)
+    # KHTN features: [toan, van, anh, ly, hoa, sinh]
+    print("\n### TEST: Học sinh IT Chuyên (KHTN) ###")
+    scores_it = [9, 5, 7, 8.5, 5, 4]
+    kbs_khtn.print_ranking(scores_it)
     
-    # Test Case 2: Học sinh Y Khoa chuyên
-    print("\n### TEST CASE 2: Học sinh Y Khoa Chuyên ###")
-    scores_2 = [6, 5, 8, 8.5, 7, 7, 6, 6, 5]
-    kbs.print_ranking(scores_2)
+    print("\n### TEST: Học sinh Y Khoa (KHTN) ###")
+    scores_yk = [6, 7, 6, 5, 8, 8.5]
+    kbs_khtn.print_ranking(scores_yk)
     
-    # Test Case 3: Học sinh cân bằng
-    print("\n### TEST CASE 3: Học sinh Cân Bằng ###")
-    scores_3 = [7, 7, 7, 7, 7, 7, 7, 7, 7]
-    kbs.print_ranking(scores_3)
+    # Test KHXH
+    kbs_khxh = KnowledgeRuleEngine(block='khxh')
     
-    # Test Case 4: Học sinh yếu
-    print("\n### TEST CASE 4: Học sinh Yếu ###")
-    scores_4 = [5, 5, 5, 5, 5, 5, 5, 5, 5]
-    kbs.print_ranking(scores_4)
+    # KHXH features: [toan, van, anh, lich_su, dia_ly, gdcd]
+    print("\n### TEST: Học sinh Luật (KHXH) ###")
+    scores_luat = [6, 7.5, 7, 8.5, 6, 8.5]
+    kbs_khxh.print_ranking(scores_luat)
+    
+    print("\n### TEST: Học sinh Du lịch (KHXH) ###")
+    scores_dl = [5, 8, 8.5, 6, 8, 6]
+    kbs_khxh.print_ranking(scores_dl)

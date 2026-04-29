@@ -4,107 +4,143 @@ Bước 6: Đánh giá hệ thống tổng thể - so sánh độ chính xác c�
 """
 
 import pickle
+import os
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report
 import logging
-from config import DATA_PATH, NGANH_HOC_MAP, MODEL_PATH, FEATURE_NAMES
-from hybrid_engine import get_hybrid_advice
+from config import (
+    TEST_SIZE,
+    RANDOM_STATE,
+    get_data_path,
+    get_features,
+    get_majors,
+    NGANH_HOC_MAP,
+    MAJOR_NAMES,
+)
+from hybrid_fusion import calculate_hybrid_score, load_ml_model
 
 # Cấu hình logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Get MAJOR_NAMES from NGANH_HOC_MAP
-MAJOR_NAMES = [NGANH_HOC_MAP[i] for i in range(len(NGANH_HOC_MAP))]
+# (Không load model ở cấp module để tránh lỗi khi API thay đổi.)
 
 
-def evaluate_ml_only(model, X_test, y_test):
-    """Đánh giá mô hình ML thuần"""
+def evaluate_ml_only(block, model, X_test, y_test):
+    """Đánh giá mô hình ML thuần cho 1 khối."""
     logger.info("\n" + "="*70)
-    logger.info("1️⃣  ĐÁNH GIÁ ML (RANDOM FOREST THUẦN)")
+    logger.info(f"1️⃣  ĐÁNH GIÁ ML (RANDOM FOREST THUẦN) - {block.upper()}")
     logger.info("="*70)
-    
+
     y_pred = model.predict(X_test)
-    
+
     # Metrics
     accuracy = accuracy_score(y_test, y_pred)
-    precision_macro = precision_score(y_test, y_pred, average='macro')
-    recall_macro = recall_score(y_test, y_pred, average='macro')
-    f1_macro = f1_score(y_test, y_pred, average='macro')
-    
-    logger.info("\n📊 Kết quả tổng hợp:")
+    precision_macro = precision_score(y_test, y_pred, average='macro', zero_division=0)
+    recall_macro = recall_score(y_test, y_pred, average='macro', zero_division=0)
+    f1_macro = f1_score(y_test, y_pred, average='macro', zero_division=0)
+
+    logger.info("\n Kết quả tổng hợp:")
     logger.info(f"   Accuracy:  {accuracy:.4f} ({accuracy*100:.2f}%)")
     logger.info(f"   Precision: {precision_macro:.4f} ({precision_macro*100:.2f}%)")
     logger.info(f"   Recall:    {recall_macro:.4f} ({recall_macro*100:.2f}%)")
     logger.info(f"   F1 Score:  {f1_macro:.4f}")
-    
+
+    labels = sorted([int(v) for v in pd.unique(y_test)])
+    target_names = [NGANH_HOC_MAP[int(i)] for i in labels]
+
     logger.info("\n📈 Chi tiết theo ngành:")
-    report = classification_report(y_test, y_pred, target_names=MAJOR_NAMES, digits=4, output_dict=True)
-    print_classification_report(report, MAJOR_NAMES)
-    
+    report = classification_report(
+        y_test, y_pred,
+        labels=labels,
+        target_names=target_names,
+        digits=4,
+        output_dict=True,
+        zero_division=0,
+    )
+    print_classification_report(report, target_names, labels=labels)
+
     return {
         'accuracy': accuracy,
         'precision': precision_macro,
         'recall': recall_macro,
         'f1': f1_macro,
         'y_pred': y_pred,
-        'report': report
+        'report': report,
+        'labels': labels,
     }
 
 
-def evaluate_hybrid_system(model, X_test, y_test):
-    """Đánh giá hệ thống Hybrid (ML + KBS)"""
-    logger.info("\n" + "="*70)
-    logger.info("2️⃣  ĐÁNH GIÁ HYBRID SYSTEM (ML + KBS)")
-    logger.info("="*70)
-    
+def evaluate_hybrid_system(block, model, X_test, y_test, max_samples=None):
+    """Đánh giá hệ thống Hybrid (ML + KBS) cho 1 khối."""
+    logger.info("\n" + "=" * 70)
+    logger.info(f"2️⃣  ĐÁNH GIÁ HYBRID SYSTEM (ML + KBS) - {block.upper()}")
+    logger.info("=" * 70)
+
+    features = get_features(block)
+    majors = get_majors(block)
+
     y_pred_hybrid = []
     hybrid_scores = []
-    
-    logger.info(f"\n⏳ Đang dự đoán {len(X_test)} mẫu...")
-    for idx, (i, row) in enumerate(X_test.iterrows()):
+
+    n_total = len(X_test)
+    if max_samples is not None and max_samples > 0:
+        n_total = min(n_total, max_samples)
+        X_iter = X_test.iloc[:n_total]
+        y_iter = y_test.iloc[:n_total]
+    else:
+        X_iter = X_test
+        y_iter = y_test
+
+    logger.info(f"\n⏳ Đang dự đoán {len(X_iter)} mẫu...")
+    for idx, (_, row) in enumerate(X_iter.iterrows()):
         if (idx + 1) % 1000 == 0:
-            logger.info(f"   Tiến độ: {idx+1}/{len(X_test)}")
-        
-        scores = row.values.tolist()
-        
-        # Lấy xếp hạng từ hybrid
-        rankings = []
-        max_score = 0
-        best_major = 0
-        
-        for major_idx in range(len(NGANH_HOC_MAP)):
-            score, _, _, _ = get_hybrid_advice(scores, major_idx)
-            if score is not None:
-                rankings.append((major_idx, score))
-                if score > max_score:
-                    max_score = score
-                    best_major = major_idx
-        
+            logger.info(f"   Tiến độ: {idx+1}/{len(X_iter)}")
+
+        user_scores = row[features].values.tolist()
+
+        best_major = None
+        best_score = -1.0
+        for major_label in majors:
+            result = calculate_hybrid_score(user_scores, major_label, block=block, model=model)
+            score = result.get('hybrid_score', 0)
+            if score > best_score:
+                best_score = score
+                best_major = major_label
+
         y_pred_hybrid.append(best_major)
-        hybrid_scores.append(max_score)
-    
+        hybrid_scores.append(best_score)
+
     y_pred_hybrid = np.array(y_pred_hybrid)
-    
+
     # Metrics
-    accuracy = accuracy_score(y_test, y_pred_hybrid)
-    precision_macro = precision_score(y_test, y_pred_hybrid, average='macro')
-    recall_macro = recall_score(y_test, y_pred_hybrid, average='macro')
-    f1_macro = f1_score(y_test, y_pred_hybrid, average='macro')
-    
+    accuracy = accuracy_score(y_iter, y_pred_hybrid)
+    precision_macro = precision_score(y_iter, y_pred_hybrid, average='macro', zero_division=0)
+    recall_macro = recall_score(y_iter, y_pred_hybrid, average='macro', zero_division=0)
+    f1_macro = f1_score(y_iter, y_pred_hybrid, average='macro', zero_division=0)
+
     logger.info("\n📊 Kết quả tổng hợp:")
     logger.info(f"   Accuracy:  {accuracy:.4f} ({accuracy*100:.2f}%)")
     logger.info(f"   Precision: {precision_macro:.4f} ({precision_macro*100:.2f}%)")
     logger.info(f"   Recall:    {recall_macro:.4f} ({recall_macro*100:.2f}%)")
     logger.info(f"   F1 Score:  {f1_macro:.4f}")
     logger.info(f"   Avg Hybrid Score: {np.mean(hybrid_scores):.2f}%")
-    
-    logger.info("\n📈 Chi tiết theo ngành:")
-    report = classification_report(y_test, y_pred_hybrid, target_names=MAJOR_NAMES, digits=4, output_dict=True)
-    print_classification_report(report, MAJOR_NAMES)
-    
+
+    labels = sorted([int(v) for v in pd.unique(y_iter)])
+    target_names = [NGANH_HOC_MAP[int(i)] for i in labels]
+    logger.info("\n Chi tiết theo ngành:")
+    report = classification_report(
+        y_iter, y_pred_hybrid,
+        labels=labels,
+        target_names=target_names,
+        digits=4,
+        output_dict=True,
+        zero_division=0,
+    )
+    print_classification_report(report, target_names, labels=labels)
+
     return {
         'accuracy': accuracy,
         'precision': precision_macro,
@@ -112,18 +148,30 @@ def evaluate_hybrid_system(model, X_test, y_test):
         'f1': f1_macro,
         'y_pred': y_pred_hybrid,
         'hybrid_scores': hybrid_scores,
-        'report': report
+        'report': report,
+        'labels': labels,
     }
 
 
-def print_classification_report(report, major_names):
+def print_classification_report(report, major_names, labels=None):
     """In classification report theo ngành"""
     logger.info(f"{'Ngành':25} {'Precision':12} {'Recall':12} {'F1-Score':12} {'Support':10}")
     logger.info("-" * 70)
-    for idx, major in enumerate(major_names):
-        if str(idx) in report:
-            metrics = report[str(idx)]
-            logger.info(f"{major[:25]:25} {metrics['precision']:12.4f} {metrics['recall']:12.4f} {metrics['f1-score']:12.4f} {int(metrics['support']):10}")
+    if labels is None:
+        for idx, major in enumerate(major_names):
+            if str(idx) in report:
+                metrics = report[str(idx)]
+                logger.info(
+                    f"{major[:25]:25} {metrics['precision']:12.4f} {metrics['recall']:12.4f} {metrics['f1-score']:12.4f} {int(metrics['support']):10}"
+                )
+    else:
+        for label, major in zip(labels, major_names):
+            key = str(label)
+            if key in report:
+                metrics = report[key]
+                logger.info(
+                    f"{major[:25]:25} {metrics['precision']:12.4f} {metrics['recall']:12.4f} {metrics['f1-score']:12.4f} {int(metrics['support']):10}"
+                )
 
 
 def compare_ml_vs_hybrid(ml_results, hybrid_results):
@@ -155,7 +203,7 @@ def compare_ml_vs_hybrid(ml_results, hybrid_results):
     logger.info(f"\n🎯 Cải thiện trung bình: {avg_improvement:+.2f}%")
     
     if avg_improvement > 0:
-        logger.info("✅ Hybrid System cải thiện hiệu suất so với ML thuần!")
+        logger.info(" Hybrid System cải thiện hiệu suất so với ML thuần!")
     elif avg_improvement < 0:
         logger.info("⚠️ ML thuần vẫn tốt hơn - cần điều chỉnh Fuzzy rules")
     else:
@@ -190,57 +238,64 @@ def analyze_prediction_confidence(ml_preds, hybrid_scores, y_test):
 
 
 def main():
-    """Main evaluation function"""
+    """Main evaluation function (đánh giá theo từng khối)."""
     try:
-        # 1. Load data
-        logger.info("📖 Đang load dữ liệu...")
-        df = pd.read_csv(DATA_PATH)
-        logger.info(f"✓ Load thành công: {len(df)} samples")
-        
-        # Prepare features and target
-        X = df[FEATURE_NAMES]
-        y = df['nganh_hoc']
-        
-        # Split data
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42, stratify=y
-        )
-        
-        # 2. Load model
-        logger.info("\n🔄 Đang load mô hình...")
-        with open(MODEL_PATH, 'rb') as f:
-            model = pickle.load(f)
-        logger.info("✓ Mô hình đã load")
-        
-        # 3. Evaluate ML
-        ml_results = evaluate_ml_only(model, X_test, y_test)
-        
-        # 4. Evaluate Hybrid
-        logger.info("\n⏳ Đánh giá Hybrid System - có thể mất 1-2 phút...")
-        hybrid_results = evaluate_hybrid_system(model, X_test, y_test)
-        
-        # 5. Compare
-        compare_ml_vs_hybrid(ml_results, hybrid_results)
-        
-        # 6. Analyze confidence
-        analyze_prediction_confidence(ml_results['y_pred'], hybrid_results['hybrid_scores'], y_test.values)
-        
-        # 7. Summary
-        logger.info("\n" + "="*70)
-        logger.info("✅ ĐÁNH GIÁ HOÀN TẤT")
-        logger.info("="*70)
-        logger.info("\n📋 Khuyến nghị:")
-        
-        ml_acc = ml_results['accuracy']
-        hybrid_acc = hybrid_results['accuracy']
-        
-        if hybrid_acc > ml_acc:
-            logger.info(f"✅ Sử dụng Hybrid System - cải thiện {(hybrid_acc-ml_acc)*100:.2f}%")
-        else:
-            logger.info("⚠️ ML thuần vẫn tốt hơn - xem xét điều chỉnh KBS rules")
-        
-        logger.info("\nChi tiết lưu trong log")
-        
+        max_samples_env = os.getenv("EVAL_MAX_SAMPLES", "0").strip()
+        max_samples = int(max_samples_env) if max_samples_env and int(max_samples_env) > 0 else None
+
+        blocks = ["khtn", "khxh"]
+        for block in blocks:
+            logger.info("\n" + "=" * 80)
+            logger.info(f"🚀 BẮT ĐẦU ĐÁNH GIÁ CHO KHỐI {block.upper()}")
+            logger.info("=" * 80)
+
+            logger.info("📖 Đang load dữ liệu...")
+            df = pd.read_csv(get_data_path(block))
+            logger.info(f"✓ Load thành công: {len(df):,} samples")
+
+            features = get_features(block)
+            X = df[features]
+            y = df["nganh_hoc"]
+
+            X_train, X_test, y_train, y_test = train_test_split(
+                X,
+                y,
+                test_size=TEST_SIZE,
+                random_state=RANDOM_STATE,
+                stratify=y,
+            )
+
+            logger.info("\n🔄 Đang load mô hình...")
+            model = load_ml_model(block)
+            if model is None:
+                logger.warning(f"⚠️  Không load được ML model cho {block}. Bỏ qua khối này.")
+                continue
+            logger.info("✓ Mô hình đã load")
+
+            ml_results = evaluate_ml_only(block, model, X_test, y_test)
+
+            logger.info("\n⏳ Đánh giá Hybrid System (có thể chậm)...")
+            hybrid_results = evaluate_hybrid_system(
+                block, model, X_test, y_test, max_samples=max_samples
+            )
+
+            compare_ml_vs_hybrid(ml_results, hybrid_results)
+            analyze_prediction_confidence(
+                ml_results["y_pred"],
+                hybrid_results["hybrid_scores"],
+                y_test.values,
+            )
+
+            ml_acc = ml_results["accuracy"]
+            hybrid_acc = hybrid_results["accuracy"]
+            logger.info("\n📋 Khuyến nghị:")
+            if hybrid_acc > ml_acc:
+                logger.info(
+                    f"✅ Hybrid tốt hơn ML: cải thiện {(hybrid_acc - ml_acc) * 100:.2f}%"
+                )
+            else:
+                logger.info("⚠️ ML thuần vẫn tốt hơn - xem xét tinh chỉnh KBS rules")
+
     except Exception as e:
         logger.error(f"❌ Lỗi: {e}")
         import traceback

@@ -1,50 +1,51 @@
-# Hệ Thống Gợi Ý Ngành Học Thông Minh
+# Hệ Thống Gợi Ý Ngành Học Thông Minh - Phiên Bản 3.0
 
-Hybrid Career AI System - Hệ thống kết hợp Machine Learning + Luật Chuyên Gia (KBS)
-Giúp học sinh Việt Nam tìm ngành học phù hợp một cách khoa học và chính xác
+Hybrid Career AI System - Kiến trúc 2 Khối (KHTN/KHXH)
+Giúp học sinh Việt Nam tìm ngành học phù hợp dựa trên điểm thi và luật chuyên gia
 
 ## Tính Năng Nổi Bật
 
 | Tính Năng | Chi Tiết |
 |-----------|---------|
-| **Machine Learning** | Random Forest 100 cây, ~75% accuracy (dữ liệu có noise - thực tế) |
-| **KBS - Luật Chuyên Gia** | 32 luật cơ sở + 10 luật chuỗi (Forward Chaining) + Conflict Resolution |
-| **Hybrid Fusion** | 60% ML Score + 40% KBS Score, KBS 95% case study accuracy |
-| **Forward Chaining** | Suy luận chuỗi: phát hiện chuyên ngành phụ (IT Quốc Tế, Y khoa Nghiên cứu) |
-| **Conflict Resolution** | Giải quyết xung đột: ưu tiên specificity > score |
-| **Giao Diện Tương Tác** | Streamlit 3 tab: Kết quả, Phân tích chi tiết, So sánh ngành |
-| **Dữ Liệu Huấn Luyện** | 117,280 mẫu + feature noise (std=0.3) + label noise (8%) |
-| **Đánh Giá KBS** | Edge cases, case studies (95%), reasonableness tests (5/5) |
+| **Kiến Trúc** | 2 khối: KHTN (5 ngành) + KHXH (4 ngành), 2 model ML riêng |
+| **Machine Learning** | Random Forest × 2, 6 features per khối, Dữ liệu từ THPT 2024 |
+| **KBS - Luật Chuyên Gia** | ~20 luật/khối (JSON config) + Conflict Resolution + Specificity |
+| **Hybrid Fusion** | 60% ML Score + 40% KBS Score, với VETO mechanism |
+| **VETO Mechanism** | KBS phủ quyết kết quả ML khi phát hiện bất hợp lý (môn chính < 4.0) |
+| **Giao Diện** | Streamlit: Chọn khối → Nhập điểm → Xem kết quả + Giải thích |
+| **Dữ Liệu** | KHTN: toan, van, anh, ly, hoa, sinh | KHXH: toan, van, anh, lich_su, dia_ly, gdcd |
+| **Config** | rules_config.json: Thresholds, scores, specificity ← dễ cập nhật |
+| **Fallback** | Nếu ML unavailable → 100% KBS |
+| **Logging** | Prediction tracking + Performance monitoring |
 
 ---
 
-##  Cấu Trúc Dự Án
+##  Cấu Trúc Dự Án - v3.0
 
 ```
 e:/KBS/
 
  CORE MODULES
-  app.py                     Giao diện Streamlit (3 tab: Kết quả, Phân tích, So sánh)
-  hybrid_fusion.py           Kết hợp: 60% ML + 40% KBS - Hybrid Score (ENGINE CHÍNH)
-  knowledge_rules.py         32 luật chuyên gia (4 luật × 8 ngành, độc lập ML)
-  hybrid_engine.py           Adapter: Wrapper cho backward compatibility (fallback)
-  config.py                  Cấu hình: 8 ngành, 9 môn học, 117,280 mẫu cân bằng
+  app.py                     Giao diện Streamlit: Chọn khối → Nhập điểm → Xem kết quả
+  hybrid_fusion.py           Kết hợp: 60% ML + 40% KBS + VETO (ENGINE CHÍNH)
+  knowledge_rules.py         Luật từ JSON config (json-based, dễ cập nhật)
+  config.py                  Cấu hình: 2 khối (KHTN/KHXH), 6 features/khối, paths
 
  TRAINING & DATA
-  create_data.py             Tạo 117,280 mẫu dữ liệu cân bằng
-  train_model.py             Huấn luyện Random Forest (100 trees, max_depth=15, Loại 2: Luật từ ML)
-  data_tuyensinh_balanced.csv Dataset 117,280 rows × 10 cols (~18.67 MB, auto-gen)
-  rf_model.pkl               Trained Random Forest model (auto-gen)
+  train_model.py             Huấn luyện 2 model RF (KHTN + KHXH) từ CSV
+  diem_thi_thpt_2024.csv     Dữ liệu gốc THPT 2024 (~65MB)
+  data_khtn.csv              Dữ liệu xử lý KHTN (auto-generate/update)
+  data_khxh.csv              Dữ liệu xử lý KHXH (auto-generate/update)
+  rf_model_khtn.pkl          Random Forest model KHTN (auto-gen)
+  rf_model_khxh.pkl          Random Forest model KHXH (auto-gen)
 
- KBS RULES & CONFIG (v2.0)
-  rules_config.json          Cấu hình luật JSON (thresholds, scores, chaining rules)
+ KBS RULES & CONFIG (v3.0)
+  rules_config.json          Cấu hình luật JSON: ~20 luật/khối, thresholds, scores, specificity
   
- ANALYSIS & EVALUATION (v2.0)
-  rule_extraction.py         Trích xuất top 50 rules từ ML models
-  evaluate_model.py          So sánh ML vs Hybrid performance
-  evaluate_kbs.py            Đánh giá KBS: edge cases, case study, reasonableness
-  experiments.py             Thử nghiệm: weight ratios, hyperparameter tuning, ML vs KBS
-  KBS_EVALUATION_REPORT.py   Báo cáo đánh giá KBS v2.0
+ ANALYSIS & EVALUATION (v3.0)
+  evaluate_model.py          So sánh ML vs Hybrid trên mỗi khối
+  experiments.py             Thử nghiệm: weight tuning, khối thí nghiệm
+  test_hybrid_fusion.py      Unit tests cho hybrid fusion engine
   
  MONITORING & AUTO-RETRAIN (v1.2)
   monitoring.py              Performance tracking & prediction logging
@@ -55,7 +56,7 @@ e:/KBS/
 
  DOCUMENTATION
   README.md                 Hướng dẫn chính (file này)
-  DATASET.md                Mô tả dữ liệu: 117,280 mẫu + noise, 9 features, 8 classes
+  DATASET.md                Mô tả dữ liệu: 160,000 mẫu + noise, 10 features, 8 classes
   KNOWLEDGE_BASED_RULES.md  32 luật + Forward Chaining + Conflict Resolution
 
  CONFIGURATION
@@ -70,13 +71,13 @@ e:/KBS/
 ### 1. Tổng Quan Hệ Thống
 
 ```
-Đầu Vào (9 Điểm Môn Học)
+Đầu Vào (10 Điểm Môn Học)
     │
     ├─────────────────────────────────────────────────┐
     │                                                 │
     ↓                                                 ↓
 NHÁNH MACHINE LEARNING                    NHÁNH LUẬT CHUYÊN GIA
-Random Forest (~75%)                 32 Luật + Forward Chaining (40%)
+Random Forest (74.61%)                 32 Luật + Forward Chaining (40%)
     │                                 + Conflict Resolution
     │                                                 │
     ├─────────────────────────────────────────────────┤
@@ -95,9 +96,9 @@ Random Forest (~75%)                 32 Luật + Forward Chaining (40%)
 #### LỚPĐẦU VÀO
 ```
 Giao Diện Streamlit (app.py)
-├─ 9 thanh trượt (môn học): Toán, Lý, Hóa, Sinh, Văn, Anh, Lịch sử, Địa lý, Tin
+├─ 10 thanh trượt (môn học): Toán, Lý, Hóa, Sinh, Văn, Anh, Lịch sử, Địa lý, Tin, GDCD
 ├─ Khoảng: 0-10 điểm mỗi môn
-└─ Đầu Ra: Mảng [float × 9] phạm vi [0, 10]
+└─ Đầu Ra: Mảng [float × 10] phạm vi [0, 10]
 ```
 
 #### LỚPXỬ LÝ MACHINE LEARNING
@@ -107,21 +108,21 @@ Cấu Hình (config.py)
 └─ Tải: rf_model.pkl (mô hình RF đã huấn luyện)
 
 Random Forest (hybrid_fusion.py → calculate_ml_score)
-├─ Đầu Vào: Điểm normalize [0,10] → [3,10]
+├─ Đầu Vào: Điểm raw [0,10] (không normalize, model train trên [3,10])
 ├─ Quá Trình:
 │  ├─ Đi qua 100 cây (song song)
 │  ├─ Bỏ phiếu cây: Mỗi cây dự đoán lớp (0-7)
 │  └─ Đầu Ra: predict_proba → xác suất mỗi lớp
-├─ Temperature Scaling: boosted = prob^(1/0.7)
-├─ Baseline Adjust: (boosted - 1/8) / (1 - 1/8) × 100
+├─ Temperature Scaling: adjusted = probs^(1/T) / sum(probs^(1/T)), T=0.5
+├─ Baseline Adjust: (adjusted[i] - 1/8) / (1 - 1/8) × 100
 └─ Kết Quả: ML_Score (0-100%)
-           Ví Dụ: prob=0.61 → boosted=0.49 → ML_Score=41.7%
+           Ví Dụ: prob=0.93 → adjusted=0.99 → ML_Score=99.8%
 ```
 
 #### LỚPXỬ LÝ LUẬT CHUYÊN GIA (KBS)
 ```
 Hệ Thống Luật Chuyên Gia (knowledge_rules.py)
-├─ Đầu Vào: 9 điểm môn học [0-10]
+├─ Đầu Vào: 10 điểm môn học [0-10]
 │
 ├─ 32 Luật Cơ Sở (4 luật × 8 ngành) + specificity:
 │  ├─ IT:       Toán≥8 AND Tin≥8 AND Lý≥7 → 95% (spec=3)
@@ -168,7 +169,7 @@ Giao Diện Streamlit (app.py)
 │  └─ Giải thích chi tiết (rule name, reason, chain)
 │
 ├─ Tab 2 (Phân Tích Chi Tiết):
-│  ├─ Radar Chart: 9 môn học
+│  ├─ Radar Chart: 10 môn học
 │  └─ Bảng thống kê: điểm + xếp hạng từng môn
 │
 └─ Tab 3 (So Sánh Ngành):
@@ -199,7 +200,7 @@ app.py (Giao Diện UI)
 │   ├─ calculate_kbs_score(): Tính điểm KBS từ 32 luật
 │   ├─ calculate_hybrid_score(): Hợp nhất 0.6×ML + 0.4×KBS
 │   ├─ get_hybrid_ranking(): Xếp hạng toàn bộ 8 ngành
-│   └─ normalize_scores(): Rescale điểm [0,10] → [3,10]
+│   └─ normalize_scores(): Clip điểm về [0,10] (không normalize)
 │
 ├─ knowledge_rules.py (32 Luật Chuyên Gia KBS)
 │   ├─ KnowledgeRuleEngine: Lớp chính
@@ -219,7 +220,7 @@ app.py (Giao Diện UI)
 │   └─ Ma Trận Nhầm Lẫn
 │
 └─ Lớp Dữ Liệu
-    ├─ data_tuyensinh_balanced.csv (117,280 mẫu)
+    ├─ data_tuyensinh_balanced.csv (160,000 mẫu)
     ├─ rf_model.pkl (RF đã huấn luyện, tự động tải)
     └─ config.py (Ánh Xạ Tính Năng)
 ```
@@ -228,7 +229,7 @@ app.py (Giao Diện UI)
 
 | Thành Phần | Độ Chính Xác | Tốc Độ | Đặc Điểm |
 |-----------|----------|--------|---------|
-| Machine Learning (RF) | ~75% | 9s huấn luyện | Data-driven, giảm do noisy data (đúng kỳ vọng) |
+| Machine Learning (RF) | 74.61% | ~15s huấn luyện | Data-driven, giảm do noisy data (đúng kỳ vọng) |
 | KBS - 32+10 Luật | 95% case study | Thời Gian Thực | Forward Chaining + Conflict Resolution |
 | Hệ Thống Hybrid | Cải thiện ML | 0.05ms/mẫu | KBS bù đắp noise cho ML |
 
@@ -245,11 +246,11 @@ app.py (Giao Diện UI)
 ├─ Anh: 8.0  Lịch sử: 5.5  Địa lý: 6.5  Tin: 9.5
 
 NHÁNH ML (hybrid_fusion.py):
-├─ Normalize: [0,10] → [3,10]
-├─ RF predict_proba: [0.61, 0.15, 0.02, 0.12, ...]
-├─ Temperature Scaling (T=0.7): 0.61^(1/0.7) = 0.49
-├─ Baseline Adjust: (0.49 - 0.125) / 0.875 × 100
-└─ ML_Score = 41.7%
+├─ Input: raw scores [0,10] (model train trên [3,10])
+├─ RF predict_proba: [0.93, 0.02, 0.01, 0.02, ...]
+├─ Temperature Scaling (T=0.5): probs^(1/0.5) / sum → adjusted
+├─ Baseline Adjust: (adjusted[0] - 0.125) / 0.875 × 100
+└─ ML_Score = 99.8%
 
 NHÁNH KBS (knowledge_rules.py):
 ├─ Bước 1 - Rule Matching (32 luật IT):
@@ -263,15 +264,15 @@ NHÁNH KBS (knowledge_rules.py):
 └─ KBS_Score = min(100, 80+3) = 83%
 
 HỢP NHẤT HYBRID (hybrid_fusion.py):
-├─ ML_Score: 41.7%
+├─ ML_Score: 99.8%
 ├─ KBS_Score: 83%
-├─ Công Thức: 0.6 × 41.7 + 0.4 × 83 = 25.0 + 33.2
-└─ Hybrid_Score = 58.2%
+├─ Công Thức: 0.6 × 99.8 + 0.4 × 83 = 59.9 + 33.2
+└─ Hybrid_Score = 92.0%
 
 ĐẦU RA:
-├─ #1: IT (58.2%) ← Mức độ: Khá phù hợp
-├─ #2: Kỹ thuật (~55%)
-├─ #3: Kinh tế (~33%)
+├─ #1: IT (92.0%) ← Mức độ: Rất phù hợp
+├─ #2: Kỹ thuật (~26%)
+├─ #3: Kinh tế (~12%)
 └─ Giải Thích: "IT_Fit + Suy luận chuỗi: Phù hợp IT Quốc tế (Anh tốt)"
 ```
 
@@ -279,9 +280,9 @@ HỢP NHẤT HYBRID (hybrid_fusion.py):
 
 ```
 Giai Đoạn Huấn Luyện (~15 giây):
-├─ Dữ Liệu: 117,280 mẫu
+├─ Dữ Liệu: 160,000 mẫu
 ├─ Xử Lý: Song Song (n_jobs=-1)
-├─ Đầu Ra: rf_model.pkl (~95 MB)
+├─ Đầu Ra: rf_model.pkl (~178 MB)
 └─ Có Thể Tái Huấn: Hàng Giờ/Ngày
 
 Giai Đoạn Suy Luận (0.05ms/mẫu):
@@ -318,10 +319,10 @@ cd e:\KBS
 # Cài đặt thư viện
 pip install -r requirements.txt
 
-# Tạo dữ liệu (117,280 mẫu)
+# Tạo dữ liệu (160,000 mẫu, điểm làm tròn)
 python create_data.py
 
-# Huấn luyện mô hình (9 giây)
+# Huấn luyện mô hình (~15 giây)
 python train_model.py
 
 # Chạy ứng dụng
@@ -336,7 +337,7 @@ streamlit run app.py
 
 ### Bước 1: Nhập Điểm Số
 
-Điều chỉnh 9 thanh trượt ở Sidebar:
+Điều chỉnh 10 thanh trượt ở Sidebar:
 
 | Môn Học | Tầm Quan Trọng | Gợi Ý |
 |-----------|-----------------|---------|
@@ -349,6 +350,7 @@ streamlit run app.py
 | Lịch sử | Trung bình | (Luật pháp, Sư phạm) |
 | Địa lý | Trung bình | (Nông-Lâm-Ngư, Du lịch) |
 | Tin học | Cao | (IT, Kỹ thuật) |
+| GDCD | Thấp | (Tham khảo chung) |
 
 **Mỗi môn:** 0-10 điểm
 
@@ -370,7 +372,7 @@ Tab 1 - Kết Quả Chính:
 - Giải thích chi tiết công thức Hybrid
 
 Tab 2 - Phân Tích Chi Tiết:
-- Radar Chart: Hiển thị điểm mạnh/yếu ở 9 môn
+- Radar Chart: Hiển thị điểm mạnh/yếu ở 10 môn
 - Bảng Thống Kê: Chi tiết từng môn + xếp hạng
 
 Tab 3 - So Sánh Ngành:
@@ -408,31 +410,30 @@ Model: Random Forest Classifier
  Cross Validation: 5-fold
 
 Performance (dữ liệu có noise - thực tế):
- Test Accuracy: ~75%
- CV Accuracy: ~73%
- (Dữ liệu có feature noise std=0.3 + label noise 8%)
+ Test Accuracy: 74.61%
+ CV Accuracy: 74.66% (±0.25%)
+ (Dữ liệu có feature noise std=0.3 + label noise 8% + score rounding)
 ```
 
 ### Công Thức ML Score (hybrid_fusion.py)
 
 ```
-1. Normalize: scores [0,10] → [3,10]
-   output = 3 + (input / 10) × 7
+1. Input: raw scores [0,10] (model train trên [3,10], không normalize)
+   Chỉ clip về [0, 10]
 
-2. RF predict_proba → raw_prob cho từng ngành
+2. RF predict_proba → probs[8] cho từng ngành
 
-3. Temperature Scaling (T=0.7):
-   boosted = raw_prob ^ (1/0.7)
+3. Temperature Scaling (T=0.5, áp dụng TOÀN BỘ 8 classes):
+   adjusted = probs^(1/0.5) / sum(probs^(1/0.5))  # Re-normalize
 
 4. Baseline Adjust (8 lớp → baseline = 1/8 = 0.125):
-   ML_Score = (boosted - 0.125) / (1 - 0.125) × 100
+   ML_Score = (adjusted[i] - 0.125) / (1 - 0.125) × 100
 
 5. Clamp: [0, 100]
 
-Ví dụ:
-• Prob 0.30 → boosted=0.17 → ML_Score ≈ 5.1%
-• Prob 0.50 → boosted=0.35 → ML_Score ≈ 25.7%
-• Prob 0.80 → boosted=0.72 → ML_Score ≈ 68.0%
+Ví dụ (IT student, Toán=9, Tin=9.5):
+• probs[IT]=0.93 → adjusted=0.99 → ML_Score ≈ 99.8%
+• probs[YKhoa]=0.01 → adjusted=0.00 → ML_Score = 0%
 ```
 
 ---
@@ -440,22 +441,16 @@ Ví dụ:
 ## Dữ Liệu Huấn Luyện
 
 ```
-Dataset: 117,280 mẫu tổng hợp
- Features: 9 (Toán, Lý, Hóa, Sinh, Văn, Anh, Lịch, Địa, Tin)
- Target: 8 ngành chính 
+Dataset: 160,000 mẫu tổng hợp
+ Features: 10 (Toán, Lý, Hóa, Sinh, Văn, Anh, Lịch sử, Địa lý, Tin học, GDCD)
+ Target: 8 ngành chính
  Format: CSV (data_tuyensinh_balanced.csv)
- Size: ~18.48 MB
- Generation: Thuật toán "nhóm điểm" thông minh
+ Score Rounding: Toán bội 0.2, các môn khác bội 0.25
+ Generation: Thuật toán "nhóm điểm" + làm tròn điểm thực tế
 
-Phân bố Dữ Liệu:
- IT: 20.1% (23540 mẫu)
- Y Khoa: 29.0% (33955 mẫu)
- Luật Pháp: 16.0% (18797 mẫu)
- Kỹ Thuật: 9.9% (11601 mẫu)
- Sư Phạm: 8.7% (10235 mẫu)
- Nông-Lâm-Ngư: 7.9% (9303 mẫu)
- Du Lịch: 4.7% (5517 mẫu)
- Kinh Tế: 3.7% (4332 mẫu)
+Phân bố Dữ Liệu (cân bằng):
+ Mỗi ngành: 20,000 mẫu (12.5%)
+ Tổng: 160,000 mẫu (8 ngành × 20,000)
 ```
 
 ---
@@ -478,10 +473,11 @@ networkx           3.3     # Network analysis (optional)
 
 ```bash
 $ python create_data.py
- Tạo 117,280 mẫu dữ liệu (có noise)
+ Tạo 160,000 mẫu dữ liệu (có noise + làm tròn điểm)
  Feature noise: std=0.3, Label noise: 8%
- Phân bố: 8 ngành cân bằng
- Output: data_tuyensinh_balanced.csv (~18.5 MB)
+ Score rounding: Toán bội 0.2, các môn khác bội 0.25
+ Phân bố: 8 ngành cân bằng (20K/ngành)
+ Output: data_tuyensinh_balanced.csv
 ```
 
 **Thời gian:** ~10 giây
@@ -490,11 +486,11 @@ $ python create_data.py
 
 ```bash
 $ python train_model.py
- Load dữ liệu: 117,280 mẫu
- Split: 80/20 train/test
+ Load dữ liệu: 160,000 mẫu
+ Split: 80/20 (128K train / 32K test)
  Train RF: 100 trees (max_depth=15)
- Evaluate: ~75% accuracy (noisy data)
- Save: rf_model.pkl (~95 MB)
+ Evaluate: 74.61% accuracy (noisy data)
+ Save: rf_model.pkl (~178 MB)
 ```
 
 **Thời gian:** ~15 giây
@@ -707,7 +703,7 @@ python evaluate_model.py
 
 | Metric | ML Thuần | Hybrid (ML+KBS) | Ghi chú |
 |--------|----------|--------|-----------|
-| Accuracy | ~75% | Cải thiện | Dữ liệu có noise (std=0.3, label 8%) |
+| Accuracy | 74.61% | Cải thiện | Dữ liệu có noise (std=0.3, label 8%) |
 | KBS Case Study | - | 95% | 20 case studies chính xác |
 | Reasonableness | - | 5/5 | Tất cả tests pass |
 
@@ -810,7 +806,7 @@ logger = PredictionLogger()
 # Ghi lại dự đoán
 logger.log_prediction(
     user_id='USR_001',
-    scores=[8, 7, 6, 7, 5, 8, 6, 6, 9],
+    scores=[8, 7, 6, 7, 5, 8, 6, 6, 9, 7],  # 10 môn
     ml_prediction=0,
     hybrid_prediction=0,
     actual_major=0,  # Ngành thực tế sau khi học
@@ -847,11 +843,11 @@ e:/KBS/
     hybrid_fusion.py             Hybrid Engine CHÍNH: 60% ML + 40% KBS
     knowledge_rules.py           32 luật chuyên gia + forward chaining + conflict resolution
     hybrid_engine.py             Adapter/Wrapper (backward compatibility, fallback)
-    config.py                    Cấu hình: 8 ngành, 9 môn, RF params, noise params
+    config.py                    Cấu hình: 8 ngành, 10 môn, RF params, noise params
     requirements.txt             Dependencies
 
   DATA & MODEL
-    create_data.py               Tạo 117,280 mẫu (noisy data)
+    create_data.py               Tạo 160,000 mẫu (noisy data + score rounding)
     train_model.py               Huấn luyện Random Forest
     data_tuyensinh_balanced.csv  Dataset (auto-generated)
     rf_model.pkl                 Trained model (auto-generated)

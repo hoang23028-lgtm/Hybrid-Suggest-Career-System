@@ -4,11 +4,17 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import logging
-from hybrid_engine import (
-    get_hybrid_advice, get_all_majors_ranking, NGANH_HOC_MAP
+from config import (
+    MAJOR_NAMES,
+    get_features,
+    get_display_names,
+    DEFAULT_KHTN,
+    DEFAULT_KHXH,
+    NGANH_HOC_DESCRIPTION,
+    get_majors,
 )
 from hybrid_fusion import (
-    calculate_hybrid_score, get_hybrid_ranking, load_ml_model
+    get_hybrid_ranking, load_ml_model
 )
 
 # Cấu hình logging
@@ -33,39 +39,54 @@ st.markdown("""
         padding: 1.5rem;
         border-radius: 8px;
     }
+    .app-header {
+        background: linear-gradient(135deg, rgba(102,126,234,.25) 0%, rgba(118,75,162,.25) 100%);
+        border: 1px solid rgba(118,75,162,.25);
+        border-radius: 12px;
+        padding: 1.25rem 1.25rem;
+        margin-bottom: 0.75rem;
+    }
+    .app-subheader {
+        color: rgba(255,255,255,.95);
+        font-size: 0.95rem;
+        margin-top: 0.25rem;
+    }
+    .section-title {
+        font-weight: 700;
+        letter-spacing: 0.2px;
+    }
+    .pill {
+        display: inline-block;
+        padding: 0.15rem 0.55rem;
+        border-radius: 999px;
+        background: rgba(102,126,234,.15);
+        border: 1px solid rgba(102,126,234,.25);
+        margin-right: .4rem;
+        margin-top: .2rem;
+        font-size: .85rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # --- STREAMLIT CACHE OPTIMIZATIONS ---
 @st.cache_resource
-def get_model():
-    """Cache mô hình ML"""
-    from hybrid_engine import load_model
-    return load_model()
-
-@st.cache_resource
-def get_hybrid_model():
-    """Cache Random Forest model cho hybrid_fusion"""
-    return load_ml_model()
+def get_model(block: str):
+    """Cache Random Forest model theo khối."""
+    return load_ml_model(block)
 
 # --- INITIALIZE SESSION STATE & VARIABLES ---
 if "page" not in st.session_state:
     st.session_state.page = "home"
 
+if "selected_block_label" not in st.session_state:
+    st.session_state.selected_block_label = "KHTN"
+
 # Khởi tạo các button variables
 analyze_btn = False
 check_all_btn = False
 
-# Khởi tạo input scores
-s_toan = 8
-s_ly = 7
-s_hoa = 6
-s_sinh = 7
-s_van = 5
-s_anh = 8
-s_lich_su = 6
-s_dia_ly = 6
-s_tin = 9
+# Khởi tạo map điểm (được tạo động theo khối ở sidebar)
+scores_map = {}
 
 # --- HEADER ---
 col1, col2 = st.columns([0.9, 0.1])
@@ -83,6 +104,13 @@ st.divider()
 # --- SIDEBAR: INPUT SCORES ---
 with st.sidebar:
     st.header("Nhập thông tin")
+    st.radio(
+        "Chọn khối",
+        ["KHTN", "KHXH"],
+        key="selected_block_label",
+        horizontal=True,
+    )
+    block = 'khtn' if st.session_state.selected_block_label == 'KHTN' else 'khxh'
     
     # Nếu ở trang home, hiển thị nút bắt đầu
     if st.session_state.page == "home":
@@ -94,26 +122,28 @@ with st.sidebar:
         **Tính năng:**
         - Dự đoán ngành học phù hợp
         - Phân tích chi tiết điểm số
-        - So sánh 8 ngành khác nhau
+        - So sánh các ngành trong khối (KHTN: 5 ngành, KHXH: 4 ngành)
         - Khuyến nghị dựa trên AI
         """)
     
     else:  # Trang phân tích
         st.subheader("Điểm số các môn (0-10)")
+        feature_names = get_features(block)
+        display_map = get_display_names(block)
+        defaults = DEFAULT_KHTN if block == 'khtn' else DEFAULT_KHXH
+
         col1, col2 = st.columns(2)
-        
-        with col1:
-            s_toan = st.slider("Toán", 0, 10, 8, key="toan")
-            s_ly = st.slider("Lý", 0, 10, 7, key="ly")
-            s_hoa = st.slider("Hóa", 0, 10, 6, key="hoa")
-            s_sinh = st.slider("Sinh", 0, 10, 7, key="sinh")
-            s_van = st.slider("Văn", 0, 10, 5, key="van")
-        
-        with col2:
-            s_anh = st.slider("Anh", 0, 10, 8, key="anh")
-            s_lich_su = st.slider("Lịch sử", 0, 10, 6, key="lich_su")
-            s_dia_ly = st.slider("Địa lý", 0, 10, 6, key="dia_ly")
-            s_tin = st.slider("Tin học", 0, 10, 9, key="tin")
+        for idx, feat in enumerate(feature_names):
+            slider_col = col1 if idx % 2 == 0 else col2
+            with slider_col:
+                scores_map[feat] = st.slider(
+                    display_map[feat],
+                    0.0,
+                    10.0,
+                    float(defaults[feat]),
+                    step=0.25,
+                    key=f"{block}_{feat}",
+                )
         
         st.divider()
         
@@ -128,29 +158,41 @@ with st.sidebar:
 if st.session_state.page == "home":
     # === TRANG CHỦ (HOME PAGE) ===
     st.markdown("""
-    # Hệ Thống Gợi ý Ngành Học Thông Minh
-    
-    Với công nghệ AI hiện đại, chúng tôi giúp bạn tìm ra ngành học phù hợp nhất 
-    dựa trên điểm số và khả năng của bạn.
-    """)
+    <div class="app-header">
+        <div class="section-title" style="font-size:1.6rem; color: rgba(255,255,255,.98)">Hybrid Suggest Career System</div>
+        <div class="app-subheader">Kết hợp luật chuyên gia (KBS) + mô hình ML để gợi ý ngành phù hợp theo khối xét tuyển.</div>
+        <div style="margin-top:.65rem">
+            <span class="pill">KHTN • 6 môn • 5 ngành</span>
+            <span class="pill">KHXH • 6 môn • 4 ngành</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Thông tin hệ thống
     
     st.divider()
     
-    # Hiển thị thông tin ngành
-    st.subheader("Các Ngành Học Được Hỗ Trợ")
-    major_info = pd.DataFrame([
-        {"Ngành": "IT - Công nghệ thông tin", "Ưu tiên": "Toán, Lý, Tin học", "Mô tả": "Phát triển phần mềm, AI, An ninh"},
-        {"Ngành": "Kinh tế - Kinh doanh", "Ưu tiên": "Toán, Anh, Văn", "Mô tả": "Quản lý, Kế toán, Tiếp thị"},
-        {"Ngành": "Y khoa - Sức khỏe", "Ưu tiên": "Sinh, Hóa, Lý", "Mô tả": "Bác sĩ, Điều dưỡng, Dược sĩ"},
-        {"Ngành": "Kỹ thuật - Xây dựng", "Ưu tiên": "Toán, Lý, Tin", "Mô tả": "Xây dựng, Cơ khí, Điện"},
-        {"Ngành": "Nông - Lâm - Ngư", "Ưu tiên": "Sinh, Địa lý, Hóa", "Mô tả": "Nông nghiệp, Lâm nghiệp"},
-        {"Ngành": "Sư phạm - Giáo dục", "Ưu tiên": "Văn, Anh, Lịch sử", "Mô tả": "Dạy học, Quản lý giáo dục"},
-        {"Ngành": "Luật pháp", "Ưu tiên": "Lịch sử, Văn, Anh", "Mô tả": "Luật sư, Công tố viên"},
-        {"Ngành": "Du lịch - Khách sạn", "Ưu tiên": "Địa lý, Anh, Văn", "Mô tả": "Hướng dẫn, Quản lý khách sạn"},
-    ])
-    st.dataframe(major_info, use_container_width=True, hide_index=True)
+    def build_major_df(block: str) -> pd.DataFrame:
+        rows = []
+        for major_idx in get_majors(block):
+            info = NGANH_HOC_DESCRIPTION[int(major_idx)]
+            rows.append(
+                {
+                    "Ngành": info["name"],
+                    "Ưu tiên": ", ".join(info.get("keywords", [])),
+                    "Mô tả": info.get("description", ""),
+                }
+            )
+        return pd.DataFrame(rows)
+
+    st.subheader("Các ngành theo khối xét tuyển")
+    col_khtn, col_khxh = st.columns(2)
+    with col_khtn:
+        st.markdown("#### KHTN")
+        st.dataframe(build_major_df("khtn"), use_container_width=True, hide_index=True)
+    with col_khxh:
+        st.markdown("#### KHXH")
+        st.dataframe(build_major_df("khxh"), use_container_width=True, hide_index=True)
     
     st.divider()
     
@@ -161,14 +203,14 @@ if st.session_state.page == "home":
     Nhấn nút **"Bắt đầu phân tích"** ở sidebar
     
     ### Bước 2: Nhập Điểm Số
-    Điều chỉnh thanh slider cho 9 môn học:
-    - Toán, Lý, Hóa, Sinh
-    - Văn, Anh, Lịch sử, Địa lý, Tin học
+    Điều chỉnh thanh slider cho 6 môn học:
+    - KHTN: Toán, Văn, Anh, Lý, Hóa, Sinh
+    - KHXH: Toán, Văn, Anh, Sử, Địa, GDCD
     
     ### Bước 3: Phân Tích
     Chọn:
     - **Phân tích**: Xem kết quả chi tiết cho một ngành
-    - **Xem tất cả ngành**: So sánh tất cả 8 ngành
+    - **Xem tất cả ngành**: So sánh các ngành trong khối đang chọn
     
     ### Bước 4: Xem Kết Quả
     Nhận được:
@@ -185,29 +227,24 @@ if st.session_state.page == "home":
 elif st.session_state.page == "analyze":
     # === TRANG PHÂN TÍCH (ANALYSIS PAGE) ===
     if analyze_btn:
-        user_scores = [s_toan, s_ly, s_hoa, s_sinh, s_van, s_anh, s_lich_su, s_dia_ly, s_tin]
+        feature_names = get_features(block)
+        display_map = get_display_names(block)
+        user_scores = [scores_map[feat] for feat in feature_names]
         
         # Validate model
-        model = get_model()
+        model = get_model(block)
         if model is None:
             st.error("Lỗi: Không thể tải mô hình ML. Vui lòng chạy train_model.py trước!")
             st.stop()
         
-        # Lấy xếp hạng tất cả ngành và tìm ngành phù hợp nhất (sử dụng interest cố định 5.0)
-        all_rankings = get_all_majors_ranking(user_scores)
-        best_major = max(all_rankings, key=lambda x: (x['score'], x.get('relevance_score', 0)))
+        # Lấy xếp hạng tất cả ngành và tìm ngành phù hợp nhất
+        all_rankings = get_hybrid_ranking(user_scores, block=block, model=model)
+        best_major = all_rankings[0]
         
-        score = best_major['score']
+        score = best_major['hybrid_score']
         explanation = best_major['explanation']
         ml_score = best_major['ml_score']
         major_name = best_major['major']
-        
-        # Tìm index của ngành được chọn từ hybrid_fusion
-        from hybrid_fusion import MAJOR_NAMES
-        try:
-            best_major_index = MAJOR_NAMES.index(major_name)
-        except ValueError:
-            best_major_index = 0  # Fallback to IT if not found
         
         # Tab 1: Kết quả chính
         tab1, tab2, tab3 = st.tabs(["Kết quả chính", "Phân tích chi tiết", "So sánh ngành"])
@@ -216,37 +253,46 @@ elif st.session_state.page == "analyze":
             st.header("Kết quả Phân Tích")
             
             if score is not None:
-                # === BƯỚC 1: TÍNH HYBRID SCORE ===
-                model = get_hybrid_model()
-                hybrid_result = calculate_hybrid_score(user_scores, major_index=best_major_index, model=model)
-                
-                # Hiển thị các metrics chính
+                # "Top pick" card
+                level = "Rất phù hợp" if score >= 75 else "Khá phù hợp" if score >= 50 else "Không phù hợp"
+                st.markdown(
+                    f"""
+                    <div class="metric-card">
+                        <div style="font-size:1.05rem; font-weight:700">Ngành đề xuất: {major_name}</div>
+                        <div class="app-subheader" style="color: rgba(255,255,255,.98); margin-top:.35rem">
+                            Hybrid Score: <b>{score:.1f}%</b> • {level}
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+                st.divider()
+
+                # Hiển thị các metrics chính (reuse best_major từ all_rankings)
                 col1, col2, col3, col4, col5 = st.columns(5)
                 
                 with col1:
                     st.metric("Ngành được chọn", major_name)
                 
                 with col2:
-                    color_hybrid = "Good" if hybrid_result['hybrid_score'] >= 75 else "Fair" if hybrid_result['hybrid_score'] >= 50 else "Low"
-                    st.metric("Hybrid Score", f"{hybrid_result['hybrid_score']:.1f}%", delta=color_hybrid)
+                    color_hybrid = "Good" if score >= 75 else "Fair" if score >= 50 else "Low"
+                    st.metric("Hybrid Score", f"{score:.1f}%", delta=color_hybrid)
                 
                 with col3:
-                    ml_score_display = f"{hybrid_result['ml_score']:.1f}%" if hybrid_result['ml_score'] is not None else "N/A"
+                    ml_score_display = f"{ml_score:.1f}%" if ml_score is not None else "N/A"
                     st.metric("ML Score", ml_score_display)
                 
                 with col4:
-                    st.metric("KBS Score", f"{hybrid_result['kbs_score']:.1f}%")
+                    st.metric("KBS Score", f"{best_major['kbs_score']:.1f}%")
                 
                 with col5:
-                    hs = hybrid_result['hybrid_score']
-                    level = "Rất phù hợp" if hs >= 75 else "Khá phù hợp" if hs >= 50 else "Không phù hợp"
                     st.metric("Mức độ khuyến nghị", level)
                 
                 st.divider()
                 
                 # Giải thích chi tiết
                 st.subheader("Giải thích chi tiết")
-                st.info(hybrid_result['explanation'])
+                st.info(explanation)
             else:
                 st.error("Có lỗi xảy ra trong quá trình phân tích. Vui lòng thử lại!")
         
@@ -254,9 +300,10 @@ elif st.session_state.page == "analyze":
             st.header("Phân Tích Chi Tiết")
             
             # Radar Chart điểm các môn
+            subjects = [display_map[feat] for feat in feature_names]
             df_radar = pd.DataFrame({
                 'Điểm': user_scores,
-                'Môn': ['Toán', 'Lý', 'Hóa', 'Sinh', 'Văn', 'Anh', 'Lịch sử', 'Địa lý', 'Tin học']
+                'Môn': subjects
             })
             
             fig_radar = px.line_polar(
@@ -274,7 +321,7 @@ elif st.session_state.page == "analyze":
             # Bảng thống kê
             st.subheader("Bảng Thống Kê")
             stats_df = pd.DataFrame({
-                'Môn học': ['Toán', 'Lý', 'Hóa', 'Sinh', 'Văn', 'Anh', 'Lịch sử', 'Địa lý', 'Tin học'],
+                'Môn học': subjects,
                 'Điểm': user_scores,
                 'Xếp hạng': [
                     'Rất tốt' if s >= 8 else 'Tốt' if s >= 6 else 'Bình thường' if s >= 4 else 'Cần cải thiện'
@@ -286,9 +333,8 @@ elif st.session_state.page == "analyze":
         with tab3:
             st.header("So Sánh Các Ngành")
             
-            # === BƯỚC 2: TÍNH HYBRID RANKING CHO TẤT CẢ NGÀNH ===
-            model = get_hybrid_model()
-            hybrid_rankings = get_hybrid_ranking(user_scores, model=model)
+            # Reuse all_rankings (đã tính ở trên, không gọi lại)
+            hybrid_rankings = all_rankings
             ranking_df = pd.DataFrame(hybrid_rankings)
             
             # Biểu đồ so sánh (Hybrid, ML, KBS)
@@ -306,12 +352,10 @@ elif st.session_state.page == "analyze":
                 height=400,
                 hovermode='x unified'
             )
+            fig_hybrid_compare.update_xaxes(tickangle=-25)
             st.plotly_chart(fig_hybrid_compare, use_container_width=True)
             
             st.divider()
-            
-            # Lấy ranking từ hybrid_engine (cũ) để so sánh
-            rankings = get_all_majors_ranking(user_scores)
             
             # Bảng chi tiết
             st.subheader("Chi tiết Xếp Hạng - HYBRID")
@@ -350,16 +394,17 @@ elif st.session_state.page == "analyze":
     elif check_all_btn:
         st.header("Xếp Hạng Tất Cả Ngành")
         
-        user_scores = [s_toan, s_ly, s_hoa, s_sinh, s_van, s_anh, s_lich_su, s_dia_ly, s_tin]
+        feature_names = get_features(block)
+        user_scores = [scores_map[feat] for feat in feature_names]
         
         # Validate model
-        model = get_hybrid_model()
+        model = get_model(block)
         if model is None:
             st.error("Lỗi: Không thể tải mô hình ML!")
             st.stop()
         
         # Lấy xếp hạng hybrid tất cả ngành
-        hybrid_rankings = get_hybrid_ranking(user_scores, model=model)
+        hybrid_rankings = get_hybrid_ranking(user_scores, block=block, model=model)
         
         # Hiển thị tất cả ngành từ trên xuống
         for idx, result in enumerate(hybrid_rankings, 1):
