@@ -6,15 +6,22 @@ Bao gồm:
   3. So sánh ML rules vs Expert rules
 """
 
-import pickle
 import logging
+import pickle
+import sys
+from pathlib import Path
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import accuracy_score, f1_score
-from config import DATA_PATH, FEATURE_NAMES, MODEL_PATH, RF_PARAMS, TEST_SIZE
-from knowledge_rules import KnowledgeRuleEngine
+
+# Legacy experiments (v2 style). Updated to v3 folder layout and block-specific config.
+REPO_ROOT = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(REPO_ROOT))
+
+from kbs.config import RF_PARAMS, TEST_SIZE, get_data_path, get_features, get_majors, get_model_path
+from kbs.knowledge_rules import KnowledgeRuleEngine
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -23,7 +30,7 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 # 1. THỬ NGHIỆM TỶ LỆ ML/KBS
 # ============================================================================
-def experiment_weight_ratios(X_test, y_test, model, sample_size=2000):
+def experiment_weight_ratios(block: str, X_test, y_test, model, sample_size=2000):
     """
     Thử nghiệm các tỷ lệ ML/KBS khác nhau để tìm trọng số tối ưu.
     
@@ -34,7 +41,7 @@ def experiment_weight_ratios(X_test, y_test, model, sample_size=2000):
     logger.info("1️⃣  THỬ NGHIỆM TỶ LỆ ML/KBS")
     logger.info("="*70)
     
-    kbs_engine = KnowledgeRuleEngine()
+    kbs_engine = KnowledgeRuleEngine(block=block)
     
     # Lấy mẫu nhỏ để tăng tốc
     if len(X_test) > sample_size:
@@ -47,10 +54,12 @@ def experiment_weight_ratios(X_test, y_test, model, sample_size=2000):
     
     # Tính trước ML scores và KBS scores cho tất cả mẫu
     logger.info(f"Tính scores cho {len(X_sample)} mẫu...")
-    all_ml_scores = []  # shape: (n_samples, 8)
-    all_kbs_scores = []  # shape: (n_samples, 8)
+    majors = get_majors(block)
+    all_ml_scores = []  # shape: (n_samples, n_majors_in_block)
+    all_kbs_scores = []  # shape: (n_samples, n_majors_in_block)
     
-    X_input = pd.DataFrame(X_sample.values, columns=FEATURE_NAMES)
+    feature_names = get_features(block)
+    X_input = pd.DataFrame(X_sample.values, columns=feature_names)
     probs = model.predict_proba(X_input)
     
     for idx in range(len(X_sample)):
@@ -59,9 +68,14 @@ def experiment_weight_ratios(X_test, y_test, model, sample_size=2000):
         
         ml_row = []
         kbs_row = []
-        for major_idx in range(8):
+        # NOTE: model.classes_ only contains labels in this block.
+        classes = list(model.classes_)
+        for major_idx in majors:
             # ML score
-            raw_prob = probs[idx][major_idx]
+            if major_idx not in classes:
+                continue
+            class_pos = classes.index(major_idx)
+            raw_prob = probs[idx][class_pos]
             ml_score = (raw_prob ** 0.6) * 10 * 10  # Scale to 0-100
             ml_score = min(100, max(0, ml_score))
             ml_row.append(ml_score)
@@ -171,7 +185,7 @@ def experiment_hyperparameter_tuning(X_train, y_train, sample_size=20000):
 # ============================================================================
 # 3. SO SÁNH ML RULES VS EXPERT RULES
 # ============================================================================
-def experiment_compare_ml_vs_expert_rules(X_test, y_test, model, sample_size=3000):
+def experiment_compare_ml_vs_expert_rules(block: str, X_test, y_test, model, sample_size=3000):
     """
     So sánh rules trích xuất từ ML với rules chuyên gia.
     Phân tích: khi nào ML đồng ý/bất đồng với KBS?
@@ -180,7 +194,8 @@ def experiment_compare_ml_vs_expert_rules(X_test, y_test, model, sample_size=300
     logger.info("3️⃣  SO SÁNH ML RULES vs EXPERT RULES")
     logger.info("="*70)
     
-    kbs_engine = KnowledgeRuleEngine()
+    kbs_engine = KnowledgeRuleEngine(block=block)
+    majors = get_majors(block)
     
     if len(X_test) > sample_size:
         indices = np.random.choice(len(X_test), sample_size, replace=False)
@@ -207,10 +222,7 @@ def experiment_compare_ml_vs_expert_rules(X_test, y_test, model, sample_size=300
         
         # KBS prediction: chọn ngành có score cao nhất
         kbs_results = kbs_engine.evaluate_all_majors(scores)
-        kbs_pred = max(
-            range(8),
-            key=lambda i: kbs_results[kbs_engine.MAJOR_NAMES[i]]['score']
-        )
+        kbs_pred = max(majors, key=lambda i: kbs_results[kbs_engine.MAJOR_NAMES[i]]["score"])
         
         if ml_pred == kbs_pred:
             agree_count += 1
@@ -251,13 +263,13 @@ def experiment_compare_ml_vs_expert_rules(X_test, y_test, model, sample_size=300
         logger.info(f"   KBS tốt hơn ML khi bất đồng → Nên tăng KBS weight")
     
     agreement_rate = agree_count / total
-    logger.info(f"   Tỷ lệ đồng thuận: {agreement_rate*100:.1f}% → ", end="")
     if agreement_rate > 0.8:
-        logger.info("Hai hệ thống rất nhất quán")
+        remark = "Hai hệ thống rất nhất quán"
     elif agreement_rate > 0.6:
-        logger.info("Hai hệ thống khá nhất quán")
+        remark = "Hai hệ thống khá nhất quán"
     else:
-        logger.info("Hai hệ thống khác biệt nhiều → Hybrid có giá trị bổ sung cao")
+        remark = "Hai hệ thống khác biệt nhiều → Hybrid có giá trị bổ sung cao"
+    logger.info(f"   Tỷ lệ đồng thuận: {agreement_rate*100:.1f}% → {remark}")
     
     return {
         'agree_rate': agreement_rate,
@@ -276,11 +288,15 @@ def main():
     logger.info("🔬 BẮT ĐẦU THỬ NGHIỆM TOÀN DIỆN")
     logger.info("="*70)
     
+    # Legacy runner: pick a block to experiment on
+    block = "khtn"
+
     # Load data
     logger.info("\n📖 Load dữ liệu...")
-    df = pd.read_csv(DATA_PATH)
-    X = df[FEATURE_NAMES]
-    y = df['nganh_hoc']
+    df = pd.read_csv(get_data_path(block))
+    feature_names = get_features(block)
+    X = df[feature_names]
+    y = df["nganh_hoc"]
     
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=TEST_SIZE, random_state=42, stratify=y
@@ -289,17 +305,18 @@ def main():
     
     # Load model
     logger.info("🔄 Load mô hình...")
-    with open(MODEL_PATH, 'rb') as f:
+    model_path = REPO_ROOT / get_model_path(block)
+    with open(model_path, "rb") as f:
         model = pickle.load(f)
     
     # Experiment 1: Weight ratios
-    weight_results = experiment_weight_ratios(X_test, y_test, model)
+    weight_results = experiment_weight_ratios(block, X_test, y_test, model)
     
     # Experiment 2: Hyperparameter tuning
     best_params, best_score = experiment_hyperparameter_tuning(X_train, y_train)
     
     # Experiment 3: ML vs Expert rules
-    comparison = experiment_compare_ml_vs_expert_rules(X_test, y_test, model)
+    comparison = experiment_compare_ml_vs_expert_rules(block, X_test, y_test, model)
     
     # Summary
     logger.info("\n" + "="*70)

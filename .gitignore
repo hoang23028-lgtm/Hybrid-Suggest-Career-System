@@ -12,3 +12,6 @@ __pycache__/
 data_tuyensinh.csv
 rf_model.pkl
 app.log
+
+# Ignore extracted rule review outputs (generated)
+extracted_rules*/

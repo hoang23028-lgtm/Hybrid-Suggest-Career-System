@@ -4,6 +4,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import logging
+
 from config import (
     MAJOR_NAMES,
     get_features,
@@ -64,6 +65,24 @@ st.markdown("""
         margin-right: .4rem;
         margin-top: .2rem;
         font-size: .85rem;
+    }
+
+    /* Hide slider min/max labels (e.g. 0.00 / 10.00) */
+    div[data-testid="stSlider"] [data-testid="stTickBarMin"],
+    div[data-testid="stSlider"] [data-testid="stTickBarMax"] {
+        display: none !important;
+    }
+    /* Fallbacks for other Streamlit/BaseWeb versions */
+    div[data-testid="stSlider"] [data-testid="stTickBar"] {
+        display: none !important;
+    }
+    /* Often the min/max labels sit in the element right after the baseweb slider */
+    div[data-testid="stSlider"] div[data-baseweb="slider"] + div {
+        display: none !important;
+    }
+    /* Another common layout: last child under slider root is the label row */
+    div[data-testid="stSlider"] > div:has(div[data-baseweb="slider"]) > div:last-child {
+        display: none !important;
     }
 </style>
 """, unsafe_allow_html=True)

@@ -1,8 +1,5 @@
-# Báo Cáo Đánh Giá Hệ Thống v3.0
+# Báo Cáo Đánh Giá Hệ Thống
 
-**Ngày đánh giá:** 29/04/2026  
-**Phiên bản:** 3.0 (Kiến Trúc 2 Khối KHTN/KHXH, JSON-based Rules)  
-**Loại dự án:** Hybrid KBS + ML System
 
 ---
 
@@ -13,7 +10,7 @@
 | Tiêu Chí | Điểm | Ghi Chú |
 |----------|------|--------|
 | Kiến Trúc | 8.5/10 | Tách biệt rõ KHTN/KHXH, JSON-based |
-| Dữ Liệu | 8/10 | Dữ liệu thực tế THPT 2024, nhưng cỡ mẫu nhỏ |
+| Dữ Liệu | 8/10 | THPT 2024; cỡ mẫu sau `scripts/create_data.py` phụ thuộc CSV, lớp được cân bằng |
 | ML Model | 7.5/10 | Random Forest ổn định, chưa optimize |
 | KBS Engine | 8.5/10 | Conflict resolution tốt, JSON-based dễ maintain |
 | Hybrid Fusion | 8/10 | 60/40 weights, VETO mechanism |
@@ -46,25 +43,11 @@
 
 **Điểm cần cải thiện:**
 - ⚠ Chưa có database centralized (logging, predictions)
-- ⚠ Chưa có caching ML model (mỗi lần load pickle từ disk)
+- ✓ `hybrid_fusion` cache model và `KnowledgeRuleEngine` theo khối (singleton đơn giản)
 - ⚠ Config hard-coded trong Python, nên move vào `config.json`
 - ⚠ Batch inference chưa hỗ trợ (chỉ single input)
 
-**Khuyến nghị:**
-```python
-# Thêm caching
-from functools import lru_cache
-
-@lru_cache(maxsize=2)
-def load_model(block: str):
-    return pickle.load(open(get_model_path(block)))
-
-# Batch inference
-def predict_batch(scores_list: List[List[float]], block: str):
-    """Dự đoán nhiều học sinh một lúc"""
-    X = np.array(scores_list)
-    return engine.predict(X)
-```
+**Khuyến nghị:** batch inference có thể gom `predict_proba` trên ma trận `X` nếu sau này cần API hàng loạt (hiện Streamlit xử lý từng phiên).
 
 ---
 
@@ -77,23 +60,12 @@ def predict_batch(scores_list: List[List[float]], block: str):
 - ✓ Cấu trúc sạch (phạm vi, tên cột chuẩn)
 
 **Điểm cần cải thiện:**
-- ⚠ Cỡ mẫu nhỏ: ~30K-50K/khối (so với 160K cũ)
-- ⚠ Phân bố không đều: Kinh tế >> Nông-Lâm-Ngư
-- ⚠ Chỉ 6 features (không có tư duy, kỹ năng, sở thích)
-- ⚠ Dữ liệu tĩnh (chỉ 2024, cần cộng dồn multi-year)
-- ⚠ Chưa validate với dữ liệu từ các trường khác
+- ⚠ Nhãn `nganh_hoc` từ heuristic — cần đối chiếu thực tế nếu có khảo sát
+- ⚠ Chỉ 6 điểm môn (không có sở thích, năng lực khác)
+- ⚠ Dữ liệu một năm (mở rộng khi có thêm file các năm)
+- ⚠ Chưa validate với dữ liệu từ các nguồn khác
 
-**Khuyến nghị:**
-```bash
-# Cộng dữ liệu 2022, 2023, 2024, 2025
-python combine_multi_year_data.py --years 2022 2023 2024 2025
-
-# Phân tích phân bố
-python analyze_distribution.py
-
-# Augmentation để cân bằng ngành
-python balance_classes.py
-```
+**Khuyến nghị:** chuẩn hóa pipeline ingest nhiều năm; phân tích phân bố và drift sau khi gom dữ liệu.
 
 ---
 
@@ -263,14 +235,14 @@ def export_to_pdf():
 **Điểm mạnh:**
 - ✓ 5 file .md v3.0 chi tiết
 - ✓ README.md cập nhật phiên bản
-- ✓ DATASET_v3.md giải thích dữ liệu rõ
-- ✓ KNOWLEDGE_BASED_RULES_v3.md mô tả JSON rules
-- ✓ KBS_AI_DETAIL_v3.md pipeline chi tiết
+- ✓ `DATASET_v3.md` giải thích dữ liệu rõ
+- ✓ `KNOWLEDGE_BASED_RULES_v3.md` mô tả JSON rules
+- ✓ `KBS_AI_DETAIL_v3.md` pipeline chi tiết
 - ✓ Docstring trong code
 
 **Điểm cần cải thiện:**
 - ⚠ Chưa có API documentation (OpenAPI/Swagger)
-- ⚠ Chưa có troubleshooting guide
+- ✓ README có mục khắc phục sự cố; có thể thêm runbook vận hành
 - ⚠ Chưa có deployment instructions (Docker, cloud)
 - ⚠ Chưa có architecture diagram (mermaid/plantuml)
 
@@ -284,11 +256,13 @@ from fastapi import FastAPI
 
 app = FastAPI(title="Hybrid KBS-ML API", version="3.0")
 
-@app.post("/predict")
-def predict(block: str, scores: List[float]):
-    """Predict major từ scores"""
-    engine = HybridFusionEngine(block=block)
-    return engine.predict(scores)
+@app.post("/rank")
+def rank(block: str, scores: List[float]):
+    """Ví dụ: gọi get_hybrid_ranking từ hybrid_fusion"""
+    from hybrid_fusion import get_hybrid_ranking, load_ml_model
+
+    model = load_ml_model(block)
+    return get_hybrid_ranking(scores, block=block, model=model)
 
 # Docs tự động tại /docs
 ```
@@ -302,7 +276,7 @@ def predict(block: str, scores: List[float]):
 | **Kiến Trúc** | Tách biệt rõ | 9/10 | 2 khối, JSON-based |
 | | VETO mechanism | 8/10 | Tốt nhưng hardcoded |
 | | Error handling | 8/10 | Cơ bản nhưng đủ |
-| **Dữ Liệu** | Kích thước | 7/10 | 30-50K nhỏ hơn cũ |
+| **Dữ Liệu** | Kích thước | 7/10 | Phụ thuộc CSV; sau cân bằng theo khối |
 | | Chất lượng | 8/10 | Thực tế THPT 2024 |
 | | Features | 8/10 | 6 môn hợp lý |
 | **ML** | Accuracy | 7/10 | Chưa know thực tế |
@@ -344,7 +318,7 @@ def predict(block: str, scores: List[float]):
 ### Phase 3 (3-6 tháng) - Advanced Features
 
 - [ ] Fuzzy logic soft thresholds
-- [ ] Forward Chaining rules
+- [ ] Mở rộng chaining_rules / fuzzy thresholds
 - [ ] Dynamic weights (adaptive)
 - [ ] Batch inference API
 - [ ] Mobile app (React Native)
@@ -389,7 +363,7 @@ Hệ thống v3.0 đạt **mức sản xuất ready** (8.1/10) với:
 
 ---
 
-**Đánh giá ngày:** 29/04/2026  
+**Đánh giá ngày:** 30/04/2026  
 **Phiên bản:** 3.0  
 **Trạng thái:** ✅ Recommend for Production (with conditions)  
 **Reviewer:** Hybrid KBS-ML Team

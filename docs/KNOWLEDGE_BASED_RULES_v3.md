@@ -1,26 +1,21 @@
-# 32 Luật Tri Thức Chuyên Gia (KBS - Knowledge-Based System) v3.0
+# Luật tri thức chuyên gia (KBS) 
 
-**Hệ thống ~20 luật/khối JSON-based + Conflict Resolution + Specificity**
+**Hệ thống luật theo khối trong `rules_config.json` (JSON) + Conflict Resolution + Forward chaining (bonus) + Specificity**
 
 ---
 
 ## I. Tổng Quan Kiến Trúc KBS v3.0
 
-### Thay Đổi Chính So v2.0
+
 
 ```
-v2.0 (Cũ):
-- 32 luật hardcoded trong knowledge_rules.py
-- 8 ngành, 10 môn
-- Forward Chaining + Conflict Resolution
-- Luật được code cứng
 
-v3.0 (Mới):
-- ~20 luật/khối trong rules_config.json (JSON-based)
-- 2 khối (KHTN: 5 ngành, KHXH: 4 ngành), 6 môn/khối
-- Luật được cấu hình từ JSON
-- Dễ maintain, dễ cập nhật mà không sửa code
-- Sử dụng `_build_condition()` để convert JSON → lambda
+
+v3.0 :
+- Luật theo ngành trong `rules_config.json` (`khtn_rules`, `khxh_rules`)
+- 2 khối (KHTN: 5 ngành, KHXH: 4 ngành), 6 môn/khối (không dùng Tin học)
+- **Forward chaining:** `chaining_rules` trong JSON → `forward_chain()` sau khi chọn luật nền
+- `_build_condition()` biên dịch JSON → callable
 ```
 
 ---
@@ -115,9 +110,9 @@ Khớp:
 
 ---
 
-## IV. 20 Luật Chi Tiết Per Khối
+## IV. Luật chi tiết theo khối (ví dụ cấu trúc)
 
-### A. KHTN (Khối Học Tự Nhiên) ~ 20 Luật
+### A. KHTN (Khối Học Tự Nhiên)
 
 #### 1. IT (Công nghệ Thông tin)
 
@@ -249,7 +244,7 @@ Khớp:
 
 Tương tự, mỗi ngành có 4 luật (Very_Fit, Fit, Medium, Not_Fit)
 
-### B. KHXH (Khối Học Xã Hội) ~ 16 Luật
+### B. KHXH (Khối Học Xã Hội)
 
 #### 1. Sư phạm (Giáo dục)
 
@@ -310,36 +305,31 @@ Tương tự, mỗi ngành có 4 luật (Very_Fit, Fit, Medium, Not_Fit)
 
 ---
 
-## V. Cách Sử Dụng KBS Engine
+## V. Cách sử dụng KBS Engine
 
-### 5.1 Load & Predict
+### 5.1 Khởi tạo và `evaluate`
 
 ```python
 from knowledge_rules import KnowledgeRuleEngine
+from config import get_majors
 
-# Khởi tạo engine cho KHTN
-engine = KnowledgeRuleEngine(block='khtn')
+engine = KnowledgeRuleEngine(block="khtn")
+student_scores = [8.5, 7.0, 6.5, 7.5, 6.0, 7.0]  # đúng thứ tự get_features("khtn")
 
-# Input: 6 điểm môn (KHTN)
-student_scores = [8.5, 7.0, 6.5, 7.5, 6.0, 7.0]  # toan, van, anh, ly, hoa, sinh
+for idx in get_majors("khtn"):
+    r = engine.evaluate(student_scores, idx)
+    print(r["major"], r["score"], r["rule_name"], r["reason"])
 
-# Predict cho tất cả ngành
-kbs_scores = engine.predict(student_scores)
-print(kbs_scores)
-# Output: {0: 95.0, 1: 75.0, 2: 85.0, 3: 80.0, 4: 60.0}  # IT, KT, Y, KyThuat, NongLam
+# Hoặc một lần cho cả khối:
+all_results = engine.evaluate_all_majors(student_scores)
+# dict: tên ngành → dict kết quả (score, rule_name, reason, chain_applied, ...)
 ```
 
-### 5.2 Get Explanations
+### 5.2 Xếp hạng chỉ KBS
 
 ```python
-explanations = engine.get_explanations(student_scores)
-print(explanations)
-# Output:
-# {
-#   0: {'rule': 'IT_Very_Fit', 'score': 95, 'reason': 'Toán, Lý xuất sắc'},
-#   1: {'rule': 'KinhTe_Fit', 'score': 75, 'reason': 'Đáp ứng yêu cầu'},
-#   ...
-# }
+ranking = engine.get_ranking(student_scores)
+# list các dict: rank, major, score, rule, reason, ...
 ```
 
 ---
@@ -359,13 +349,13 @@ print(explanations)
 - **Thresholds cứng:** Toán ≥ 8 = quyết định tuyệt đối (không soft)
 - **Chưa được validate:** Luật chưa qua chuyên gia giáo dục thực tế
 - **Không học từ dữ liệu:** KBS hoàn toàn dựa trên cảm tính
-- **Forward Chaining không có:** v3.0 chỉ dùng conflict resolution đơn giản
+- **Forward chaining** đã có (bonus theo điều kiện chuỗi); có thể mở rộng thêm rule chain
 
 ---
 
 ## VII. Cải Tiến Có Thể
 
-1. **Thêm Forward Chaining:** Luật chuỗi (nếu Very_Fit → bonus điểm)
+1. **Mở rộng chaining_rules:** Thêm chuỗi suy luận theo từng ngành
 2. **Soft Thresholds:** Dùng fuzzy logic thay vì cứng (Toan ≥ 8 → degree 0.8)
 3. **Validation Workshop:** Họp với 10-15 giáo viên chuyên gia
 4. **Dynamic Thresholds:** Thresholds có thể thay đổi theo năm
@@ -378,12 +368,12 @@ print(explanations)
 | Tệp | Mục đích |
 |-----|---------|
 | `rules_config.json` | Cấu hình 20+ luật (JSON) |
-| `knowledge_rules.py` | Engine: load JSON → predict |
+| `knowledge_rules.py` | Engine: load JSON → evaluate / forward_chain |
 | `hybrid_fusion.py` | Sử dụng KBS score + ML score |
 | `config.py` | Thông tin ngành, features |
 
 ---
 
-**Cập nhật lần cuối:** 29/04/2026  
+**Cập nhật lần cuối:** 30/04/2026  
 **Phiên bản:** 3.0  
 **Format:** JSON-based, dynamic thresholds

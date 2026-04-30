@@ -1,20 +1,20 @@
-# Mô Tả Bộ Dữ Liệu (Dataset Documentation) - Phiên Bản 3.0
+# Mô Tả Bộ Dữ Liệu (Dataset Documentation)
 
 ## 1. Tổng Quan
 
 Dự án sử dụng dữ liệu từ **Kỳ thi THPT 2024 Việt Nam**, chia thành 2 khối:
 
 ### KHTN (Khối Học Tự Nhiên)
-- **Nguồn:** `diem_thi_thpt_2024.csv` (lọc hồ sơ KHTN)
+- **Nguồn:** `data/diem_thi_thpt_2024.csv` (lọc hồ sơ KHTN)
 - **Features:** Toan, Van, Anh (bắt buộc) + Ly, Hoa, Sinh (tự chọn) = 6 môn
-- **File xử lý:** `data_khtn.csv`
+- **File xử lý:** `data/data_khtn.csv`
 - **Ngành học:** IT, Kinh tế, Y khoa, Kỹ thuật, Nông-Lâm-Ngư (5 ngành)
 - **Kích thước:** ~30,000-50,000 mẫu (tùy năm)
 
 ### KHXH (Khối Học Xã Hội)
-- **Nguồn:** `diem_thi_thpt_2024.csv` (lọc hồ sơ KHXH)
+- **Nguồn:** `data/diem_thi_thpt_2024.csv` (lọc hồ sơ KHXH)
 - **Features:** Toan, Van, Anh (bắt buộc) + Lich Su, Dia Ly, GDCD (tự chọn) = 6 môn
-- **File xử lý:** `data_khxh.csv`
+- **File xử lý:** `data/data_khxh.csv`
 - **Ngành học:** Kinh tế, Sư phạm, Luật pháp, Du lịch (4 ngành)
 - **Kích thước:** ~30,000-50,000 mẫu (tùy năm)
 
@@ -73,30 +73,24 @@ Dự án sử dụng dữ liệu từ **Kỳ thi THPT 2024 Việt Nam**, chia th
 
 ### 4.1 Phân Bố Kích Thước
 
-| Khối | Số Lượng Mẫu | Tỷ Lệ | Ghi Chú |
-|------|-------------|-------|---------|
-| KHTN | ~35,000-45,000 | ~50% | Dữ liệu thực tế THPT 2024 |
-| KHXH | ~35,000-45,000 | ~50% | Dữ liệu thực tế THPT 2024 |
-| **Tổng** | **~70,000-90,000** | **100%** | Từ diem_thi_thpt_2024.csv |
+Số mẫu **phụ thuộc** file `data/diem_thi_thpt_2024.csv` và điều kiện lọc (đủ 3 môn bắt buộc + 3 môn tự chọn theo khối). Sau đó `scripts/create_data.py` **cân bằng** các lớp ngành bằng undersampling về cỡ lớp nhỏ nhất trong khối.
+
+| Khối | Thứ tự xử lý | Ghi chú |
+|------|----------------|---------|
+| KHTN | Lọc thí sinh có đủ Lý, Hóa, Sinh + Toán, Văn, Anh | Kích thước trước cân bằng thường lớn; sau cân bằng = `5 × min_count` |
+| KHXH | Lọc thí sinh có đủ Sử, Địa, GDCD + Toán, Văn, Anh | Tương tự; sau cân bằng = `4 × min_count` |
+
+Ví dụ một lần chạy điển hình: KHTN ~167k mẫu trước cân bằng → ~167k sau (5 ngành cân bằng); KHXH ~64k mẫu sau cân bằng (4 ngành). **Số liệu cụ thể xem log của `scripts/create_data.py`.**
 
 ### 4.2 Phân Bố Ngành (KHTN)
 
-| Ngành | Tỷ Lệ | Số Mẫu (Ước) | Ghi Chú |
-|------|-------|-------------|---------|
-| IT | ~20% | ~7,000 | Nhu cầu cao, cạnh tranh |
-| Kinh tế | ~25% | ~9,000 | Phổ biến, được chọn nhiều |
-| Y khoa | ~15% | ~5,000 | Cạnh tranh, yêu cầu khắt khe |
-| Kỹ thuật | ~25% | ~9,000 | Phổ biến, nhiều ngành nhỏ |
-| Nông-Lâm-Ngư | ~15% | ~5,000 | Ít được chọn, cơ hội cao |
+**Trước bước cân bằng:** tỷ lệ các lớp phụ thuộc heuristic gán nhãn trên tập thí sinh đã lọc (thường lệch).
+
+**Sau `scripts/create_data.py`:** mỗi ngành trong khối có **cùng số mẫu** (undersampling theo lớp nhỏ nhất) để huấn luyện RF ổn định.
 
 ### 4.3 Phân Bố Ngành (KHXH)
 
-| Ngành | Tỷ Lệ | Số Mẫu (Ước) | Ghi Chú |
-|------|-------|-------------|---------|
-| Kinh tế | ~35% | ~12,000 | Phổ biến nhất, cạnh tranh |
-| Sư phạm | ~20% | ~7,000 | Được chọn nhiều |
-| Luật pháp | ~20% | ~7,000 | Cạnh tranh, yêu cầu cao |
-| Du lịch | ~25% | ~9,000 | Phổ biến, cơ hội tốt |
+Tương tự KHTN: **sau cân bằng**, 4 ngành KHXH có cùng số mẫu trong `data/data_khxh.csv`.
 
 ---
 
@@ -144,19 +138,23 @@ Mỗi ngành có 4 mức: Very_Fit (95), Fit (80), Medium (65), Not_Fit (20)
 
 ### 6.1 Pipeline Xử Lý
 
+Pipeline thực tế nằm trong **`scripts/create_data.py`**:
+
 ```
-Raw Data (diem_thi_thpt_2024.csv)
+Raw Data (data/diem_thi_thpt_2024.csv)
     ↓
-[1] Lọc theo khối (KHTN/KHXH)
+[1] Đổi tên cột theo RAW_COLUMN_MAP (config.py), ví dụ dia_li → dia_ly
     ↓
-[2] Chọn columns cần thiết (toan, van, anh, ly, hoa, sinh, lich_su, dia_ly, gdcd)
+[2] Lọc theo khối: đủ 6 môn tương ứng (không dùng tin_hoc)
     ↓
-[3] Xử lý Missing/Outliers
+[3] Gán nhãn nganh_hoc bằng heuristic (assign_major_khtn / assign_major_khxh)
     ↓
-[4] Normalize nếu cần
+[4] Cân bằng lớp (undersampling về min class trong khối)
     ↓
-[5] Lưu → data_khtn.csv, data_khxh.csv
+[5] Lưu → data/data_khtn.csv, data/data_khxh.csv
 ```
+
+**Cột nhãn trong CSV đã xử lý:** `nganh_hoc` (số nguyên trùng với chỉ số trong `config.NGANH_HOC_MAP`).
 
 ### 6.2 Missing Values
 
@@ -235,37 +233,35 @@ print(data_khtn[features_khtn].describe())
 
 ```python
 X_khtn = data_khtn[features_khtn]
-y_khtn = data_khtn['nganh_id']  # hoặc label column
+y_khtn = data_khtn["nganh_hoc"]
 
 from sklearn.model_selection import train_test_split
 X_train, X_test, y_train, y_test = train_test_split(
-    X_khtn, y_khtn, test_size=0.2, random_state=42
+    X_khtn, y_khtn, test_size=0.2, random_state=42, stratify=y_khtn
 )
 
-# Train model
 from sklearn.ensemble import RandomForestClassifier
-rf = RandomForestClassifier(n_estimators=100, max_depth=15)
+from config import RF_PARAMS
+
+rf = RandomForestClassifier(**RF_PARAMS)
 rf.fit(X_train, y_train)
 ```
 
-### 9.3 Trong Prediction (App)
+### 9.3 Trong Prediction (App / API nội bộ)
+
+Điểm người dùng được đưa vào dạng **list 6 phần tử** theo đúng thứ tự `get_features(block)`, sau đó gọi `hybrid_fusion`:
 
 ```python
-# User input: điểm 6 môn
-user_scores = {
-    'toan': 8.5,
-    'van': 7.0,
-    'anh': 6.5,
-    'ly': 7.5,
-    'hoa': 6.0,
-    'sinh': 7.0
-}
+from config import get_features
+from hybrid_fusion import get_hybrid_ranking, load_ml_model
 
-# Predict
-from hybrid_fusion import HybridFusionEngine
-engine = HybridFusionEngine(block='khtn')
-result = engine.predict(user_scores)
-print(result)  # {'IT': 89.5, 'Kinh tế': 75.2, ...}
+block = "khtn"
+features = get_features(block)
+scores_list = [8.5, 7.0, 6.5, 7.5, 6.0, 7.0]  # toan, van, anh, ly, hoa, sinh
+
+model = load_ml_model(block)
+ranking = get_hybrid_ranking(scores_list, block=block, model=model)
+# ranking: list dict theo thứ tự hybrid_score giảm dần
 ```
 
 ---
@@ -305,11 +301,11 @@ print(result)  # {'IT': 89.5, 'Kinh tế': 75.2, ...}
 
 | Tệp | Mục đích |
 |-----|---------|
-| `diem_thi_thpt_2024.csv` | Raw data gốc (~65MB) |
-| `data_khtn.csv` | Dữ liệu KHTN xử lý |
-| `data_khxh.csv` | Dữ liệu KHXH xử lý |
+| `data/diem_thi_thpt_2024.csv` | Raw data gốc (~65MB) |
+| `data/data_khtn.csv` | Dữ liệu KHTN xử lý |
+| `data/data_khxh.csv` | Dữ liệu KHXH xử lý |
 | `config.py` | Cấu hình: paths, features, labels |
-| `train_model.py` | Training pipeline |
+| `scripts/train_model.py` | Training pipeline |
 | `hybrid_fusion.py` | Sử dụng dữ liệu cho prediction |
 | `rules_config.json` | KBS rules thresholds |
 
@@ -318,12 +314,12 @@ print(result)  # {'IT': 89.5, 'Kinh tế': 75.2, ...}
 ## 13. Liên Hệ & Báo Cáo
 
 - **Data Quality Issues:** Báo cáo trong GitHub Issues
-- **Missing Values:** Check log của `train_model.py`
-- **Class Imbalance:** Xem thống kê trong `evaluate_model.py`
+- **Missing Values:** Check log của `scripts/train_model.py`
+- **Class Imbalance:** Xem thống kê trong `scripts/evaluate_model.py`
 - **Feature Correlation:** Xem heatmap trong `experiments.py`
 
 ---
 
-**Cập nhật lần cuối:** 29/04/2026  
+**Cập nhật lần cuối:** 30/04/2026  
 **Phiên bản:** 3.0  
 **Chủ trì:** Hybrid KBS-ML Team

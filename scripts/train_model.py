@@ -5,11 +5,16 @@ Phiên bản 3.0: Train 2 model riêng cho KHTN và KHXH
 
 import pickle
 import logging
+import sys
+from pathlib import Path
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
-from config import (
+REPO_ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(REPO_ROOT))
+
+from kbs.config import (
     NGANH_HOC_MAP, RF_PARAMS, TEST_SIZE, CV_FOLDS, RANDOM_STATE,
     get_data_path, get_model_path, get_features, get_majors, get_major_names
 )
@@ -85,6 +90,7 @@ def train_model(block):
             logger.info(f"   {name:10s}: {imp:.4f} {bar}")
         
         # 7. Lưu mô hình
+        Path(model_path).parent.mkdir(parents=True, exist_ok=True)
         logger.info(f"\nLưu mô hình vào {model_path}...")
         with open(model_path, 'wb') as f:
             pickle.dump(model, f)
@@ -95,13 +101,27 @@ def train_model(block):
         logger.info(f"   CV Mean: {cv_scores.mean():.4f}")
         logger.info(f"   Model saved: {model_path}")
         
-        return model, accuracy
+        return model, {
+            "block": block,
+            "test_accuracy": float(accuracy),
+            "cv_mean_accuracy": float(cv_scores.mean()),
+            "cv_std_accuracy": float(cv_scores.std()),
+            "num_train": int(len(X_train)),
+            "num_test": int(len(X_test)),
+            "labels": sorted([int(v) for v in pd.unique(y)]),
+            "feature_names": feature_names,
+            "model_path": model_path,
+        }
         
     except Exception as e:
         logger.error(f"Lỗi: {e}")
         import traceback
         logger.error(traceback.format_exc())
-        return None, 0
+        return None, {
+            "block": block,
+            "error": str(e),
+            "test_accuracy": 0.0,
+        }
 
 
 def main():
@@ -110,14 +130,14 @@ def main():
     logger.info("BẮT ĐẦU HUẤN LUYỆN 2 MODEL")
     logger.info("="*60)
     
-    model_khtn, acc_khtn = train_model('khtn')
-    model_khxh, acc_khxh = train_model('khxh')
+    model_khtn, metrics_khtn = train_model('khtn')
+    model_khxh, metrics_khxh = train_model('khxh')
     
     logger.info(f"\n{'='*60}")
     logger.info(f"TỔNG KẾT CHUNG")
     logger.info(f"{'='*60}")
-    logger.info(f"   KHTN Accuracy: {acc_khtn:.4f}")
-    logger.info(f"   KHXH Accuracy: {acc_khxh:.4f}")
+    logger.info(f"   KHTN Accuracy: {metrics_khtn.get('test_accuracy', 0.0):.4f}")
+    logger.info(f"   KHXH Accuracy: {metrics_khxh.get('test_accuracy', 0.0):.4f}")
 
 
 if __name__ == "__main__":

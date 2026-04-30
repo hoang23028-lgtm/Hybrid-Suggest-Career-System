@@ -1,8 +1,4 @@
-# Hướng Dẫn AI Chi Tiết - Hybrid KBS+ML System v3.0
-
-> **Dự án:** Hệ Thống Gợi Ý Ngành Học Thông Minh  
-> **Ngày:** 29/04/2026  
-> **Phiên bản:** 3.0
+# Hướng Dẫn AI Chi Tiết - Hybrid KBS+ML System 
 
 ---
 
@@ -20,13 +16,13 @@
           │
           ▼
 ┌─────────────────────────────────────────────────────────┐
-│              HYBRID FUSION ENGINE (hybrid_fusion.py)    │
+│              HYBRID FUSION ENGINE (`kbs/hybrid_fusion.py`)    │
 │  ┌──────────────────┬─────────────────────────────┐     │
 │  │  ML BRANCH       │   KBS BRANCH                │     │
 │  │                  │                             │     │
 │  │  Random Forest   │  JSON Rules                 │     │
-│  │  rf_model.pkl    │  (rules_config.json)        │     │
-│  │  predict_proba() │  Knowledge Engine           │     │
+│  │  rf_model_*.pkl  │  (rules_config.json)        │     │
+│  │  predict_proba() │  KnowledgeRuleEngine        │     │
 │  │  → [0.15, ...]   │  → [95, 75, 85, ...]        │     │
 │  │  temp=0.75       │  + Conflict Resolution      │     │
 │  │  → 0-100% score  │  + Specificity              │     │
@@ -57,7 +53,7 @@
     Môn: Toan,Van,Anh       Môn: Toan,Van,Anh
          Ly,Hoa,Sinh            Lich Su,Dia Ly,GDCD
     
-    Model: rf_model_khtn   Model: rf_model_khxh
+    Model: models/rf_model_khtn   Model: models/rf_model_khxh
     Rules: KHTN in JSON    Rules: KHXH in JSON
     
     Output: 5 Scores       Output: 4 Scores
@@ -73,22 +69,14 @@
 **Input:** Người dùng chọn khối + nhập 6 điểm
 
 ```python
-# app.py
-selected_block = st.radio("Chọn khối", ["KHTN", "KHXH"])
-scores = {}
+# app.py (rút gọn)
+from config import get_features, get_display_names  # (shim) → kbs/config.py
 
-if selected_block == "KHTN":
-    features = ['toan', 'van', 'anh', 'ly', 'hoa', 'sinh']
-    # Slider nhập điểm
-    for feature in features:
-        scores[feature] = st.slider(f"{feature}:", 0.0, 10.0)
-        
-else:  # KHXH
-    features = ['toan', 'van', 'anh', 'lich_su', 'dia_ly', 'gdcd']
-    # Slider nhập điểm
-
-# Convert to array: [toan, van, anh, ly/lich_su, hoa/dia_ly, sinh/gdcd]
-score_array = [scores[f] for f in features]
+# UI: "KHTN" / "KHXH" → nội bộ dùng 'khtn' / 'khxh'
+block = "khtn" if st.session_state.selected_block_label == "KHTN" else "khxh"
+feature_names = get_features(block)
+display_map = get_display_names(block)
+user_scores = [st.slider(display_map.get(f, f), 0.0, 10.0, ...) for f in feature_names]
 ```
 
 **Output:** `score_array = [8.5, 7.0, 6.5, 7.5, 6.0, 7.0]`
@@ -98,26 +86,25 @@ score_array = [scores[f] for f in features]
 **Input:** score_array (6 điểm)
 
 ```python
-# hybrid_fusion.py → calculate_ml_score()
+# kbs/hybrid_fusion.py → calculate_ml_score()
 
-# Load model
-model = pickle.load(open(get_model_path(block)))
+from hybrid_fusion import load_ml_model  # (shim) → kbs/hybrid_fusion.py
 
-# Predict probability cho n ngành
-proba = model.predict_proba([score_array])[0]
-# proba shape: (n_classes,)
-# Ví dụ KHTN: (5,) → [0.12, 0.35, 0.28, 0.20, 0.05]
+model = load_ml_model(block)
 
-# Temperature Scaling (T=0.75)
-scaled_proba = softmax(logits / 0.75)
+# predict_proba trên 1 hàng DataFrame đúng tên cột get_features(block)
+probs = model.predict_proba(X_df)[0]
+classes = list(model.classes_)  # chỉ nhãn ngành của khối đó
+class_pos = classes.index(major_index)
 
-# Convert to percentage (0-100%)
-# Baseline subtraction: 1/n_classes = 0.2 (KHTN)
-ml_scores = (scaled_proba - 0.2) / (1 - 0.2) * 100
-# Clip [0, 100]
-ml_scores = np.clip(ml_scores, 0, 100)
+# Temperature T=0.75: p' ∝ p^(1/T), chuẩn hóa lại
+adjusted = np.power(probs, 1.0 / 0.75)
+adjusted = adjusted / adjusted.sum()
+scaled_prob = adjusted[class_pos]
 
-# Output: [15, 42, 35, 25, 10] (%)
+# Baseline 1/n_classes; điểm ML 0–100 cho từng ngành (major_index)
+baseline = 1.0 / len(classes)
+ml_score = 0.0 if scaled_prob <= baseline else ((scaled_prob - baseline) / (1 - baseline)) * 100.0
 ```
 
 **Công thức chi tiết:**
@@ -129,28 +116,17 @@ $$\text{ML\_Score}_i = \text{clip}\left(\frac{\text{proba}_i - \frac{1}{n}}{\fra
 **Input:** score_array (6 điểm)
 
 ```python
-# knowledge_rules.py → KnowledgeRuleEngine.predict()
+# kbs/knowledge_rules.py → KnowledgeRuleEngine.evaluate()
 
-# Load rules từ rules_config.json
-rules = load_rules_from_json('khtn')  # hoặc 'khxh'
+from knowledge_rules import KnowledgeRuleEngine  # (shim) → kbs/knowledge_rules.py
+from config import get_majors
 
-# Duyệt qua ~5 ngành, mỗi ngành ~4 luật
-for major_id in range(n_majors):
-    best_score = 0
-    best_rule = None
-    
-    for rule in rules[major_id]:
-        # Check điều kiện
-        if rule.condition(score_array):
-            # Conflict resolution: ưu tiên specificity cao
-            if rule.specificity > best_rule.specificity or \
-               (rule.specificity == best_rule.specificity and rule.score > best_rule.score):
-                best_score = rule.score
-                best_rule = rule
-    
-    kbs_scores[major_id] = best_score
+engine = KnowledgeRuleEngine(block="khtn")  # hoặc "khxh"
+user_scores = [8.5, 7.0, 6.5, 7.5, 6.0, 7.0]  # đúng thứ tự get_features(block)
 
-# Output: [95, 75, 85, 80, 60] (%)
+for major_index in get_majors("khtn"):
+    r = engine.evaluate(user_scores, major_index)
+    # r: score, rule_name, reason, relevance_score, chain_applied, chain_details, ...
 ```
 
 ### 2.4 Bước 4: Hybrid Fusion
@@ -158,9 +134,9 @@ for major_id in range(n_majors):
 **Input:** ml_scores (5 điểm), kbs_scores (5 điểm)
 
 ```python
-# hybrid_fusion.py → calculate_hybrid_score()
-
-# Fusion: 60% ML + 40% KBS
+# kbs/hybrid_fusion.py → calculate_hybrid_score() (mỗi ngành)
+# Mặc định: hybrid = 0.6 * ml + 0.4 * kbs
+# Nếu VETO: trọng số chuyển về ~0.15 ML + 0.85 KBS (xem check_kbs_veto)
 hybrid_scores = 0.6 * ml_scores + 0.4 * kbs_scores
 
 # Ví dụ:
@@ -221,24 +197,16 @@ VETO_KBS_DOMINANT_WEIGHT = 0.85      # Khi veto: 85% KBS, 15% ML
 
 ### 3.2 Ví Dụ VETO
 
+Môn **trọng tâm** để kiểm tra ngưỡng 4.0 được lấy theo khối và ngành trong `KnowledgeRuleEngine` (`KHTN_KEY_SUBJECTS` / `KHXH_KEY_SUBJECTS`).
+
 ```
-Học sinh: Toán=3.5, Văn=8, Anh=8, Ly=2, Hoa=1.5, Sinh=2
+Học sinh: Toán=3.5, Văn=8, Anh=8, Ly=2, Hóa=1.5, Sinh=2
 Khối: KHTN
 
-ML Prediction: IT=65%, Y khoa=75% (vì Sinh rất thấp)
-KBS Prediction: IT=20% (Not_Fit), Y khoa=20% (Not_Fit)
+ML có thể vẫn cho xác suất cao ở một số ngành; KBS có thể trả Not_Fit (điểm thấp).
 
-→ Phát hiện VETO:
-   - IT: ML=65 nhưng KBS=20 → bất hợp lý
-   - Y: ML=75 nhưng KBS=20 → bất hợp lý
-   - Nguyên nhân: Ly=2, Sinh=2 < 4.0 (môn chính của IT, Y)
-
-→ Áp dụng VETO:
-   - New score = 0.85 × KBS + 0.15 × ML
-   - IT: 0.85 × 20 + 0.15 × 65 = 17 + 9.75 = 26.75%
-   - Y: 0.85 × 20 + 0.15 × 75 = 17 + 11.25 = 28.25%
-
-→ Output: "Cảnh báo: IT/Y yêu cầu Lý (hiện 2/10), Sinh (hiện 2/10) cao hơn"
+→ Nếu KBS ≤ 20, ML > 60 và có môn trọng tâm < 4.0 → VETO kích hoạt
+→ Hybrid ≈ 0.15 × ML + 0.85 × KBS (thay vì 60/40)
 ```
 
 ---
@@ -262,12 +230,12 @@ RF_PARAMS = {
 ### 4.2 Training Pipeline
 
 ```python
-# train_model.py
+# scripts/train_model.py
 
 # [1] Load data
 data = pd.read_csv(get_data_path(block))
 X = data[get_features(block)]  # 6 features
-y = data['nganh_id']           # 5 labels (KHTN)
+y = data["nganh_hoc"]          # nhãn ngành (theo scripts/create_data.py)
 
 # [2] Split 80/20
 X_train, X_test, y_train, y_test = train_test_split(
@@ -346,51 +314,34 @@ def _build_condition(thresholds, operator, feature_index):
         return lambda s, _checks=checks: any(s[i] < t for i, t in _checks)
 ```
 
-### 5.2 Conflict Resolution Algorithm
+### 5.2 Conflict Resolution
 
-```python
-def resolve_conflict(matched_rules):
-    """
-    Input: [rule1, rule2, rule3] (tất cả khớp)
-    Output: best_rule
-    
-    Ưu tiên:
-      1. specificity cao nhất
-      2. score cao nhất
-    """
-    # Sort by (specificity DESC, score DESC)
-    sorted_rules = sorted(matched_rules,
-                          key=lambda r: (-r.specificity, -r.score))
-    return sorted_rules[0]
-```
+Trong `KnowledgeRuleEngine.resolve_conflicts()`, luật thắng là luật có **specificity** cao nhất, nếu hòa thì **score** cao hơn (dict từ JSON, có trường `condition` đã biên dịch).
 
 ---
 
 ## 6. Output Format
 
-### 6.1 API Response
+### 6.1 Kết quả `get_hybrid_ranking`
 
-```json
-{
-  "block": "khtn",
-  "ranking": [
-    {
-      "major_id": 1,
-      "major_name": "Kinh tế",
-      "hybrid_score": 55.2,
-      "ml_score": 42,
-      "kbs_score": 75,
-      "kbs_rule": "KinhTe_Fit",
-      "reason_ml": "Anh (7.0) + Toán (8.5) hợp lý",
-      "reason_kbs": "Anh≥7, Toán≥6.5, Văn≥6.5 → Fit rule",
-      "rank": 1
-    },
-    {...}
-  ],
-  "veto_triggered": false,
-  "timestamp": "2026-04-29T14:30:00Z"
-}
+Hàm trả về **list** các dict (đã gán `rank` sau khi sort):
+
+```python
+[
+  {
+    "rank": 1,
+    "major": "Kinh tế",
+    "hybrid_score": 55.2,
+    "ml_score": 42.0,
+    "kbs_score": 75.0,
+    "relevance_score": 7.2,
+    "explanation": "..."  # chuỗi tiếng Việt, có thể ghi VETO
+  },
+  ...
+]
 ```
+
+Chi tiết veto / trọng số nằm trong từng lần gọi `calculate_hybrid_score` (trường `vetoed`, `ml_weight`, `kbs_weight` trong dict trả về).
 
 ### 6.2 Streamlit Display
 
@@ -418,24 +369,9 @@ st.pyplot(fig)
 
 ## 7. Error Handling & Logging
 
-### 7.1 Validation Input
+### 7.1 Chuẩn hóa đầu vào
 
-```python
-# hybrid_fusion.py → _validate_input()
-
-def _validate_input(score_array, features):
-    """Kiểm tra input hợp lệ"""
-    if len(score_array) != len(features):
-        raise ValueError(f"Expected {len(features)} features")
-    
-    if any(s < 0 or s > 10 for s in score_array):
-        raise ValueError("Scores must be in [0, 10]")
-    
-    if any(pd.isna(s) for s in score_array):
-        raise ValueError("Missing values not allowed")
-    
-    return True
-```
+`hybrid_fusion.normalize_scores()` **clip** từng điểm về `[0, 10]` (không chia 10). Độ dài list phải khớp `len(get_features(block))`; nếu sai, `calculate_ml_score` ném `ValueError`.
 
 ### 7.2 Logging
 
@@ -497,16 +433,16 @@ def calculate_satisfaction(actual_major, predicted_major):
 | `app.py` | UI: Input + Output |
 | `hybrid_fusion.py` | Engine: ML + KBS + Fusion + VETO |
 | `knowledge_rules.py` | KBS: JSON → Predict |
-| `train_model.py` | ML: Training pipeline |
+| `scripts/train_model.py` | ML: Training pipeline |
 | `config.py` | Settings, paths, features |
 | `rules_config.json` | KBS rules (20+ luật) |
-| `rf_model_khtn.pkl` | ML model (KHTN) |
-| `rf_model_khxh.pkl` | ML model (KHXH) |
+| `models/rf_model_khtn.pkl` | ML model (KHTN) |
+| `models/rf_model_khxh.pkl` | ML model (KHXH) |
 | `monitoring.py` | Logging & Performance |
 | `experiments.py` | Testing & Tuning |
 
 ---
 
-**Cập nhật:** 29/04/2026  
+**Cập nhật:** 30/04/2026  
 **Phiên bản:** 3.0  
 **Tác giả:** Hybrid KBS-ML Team

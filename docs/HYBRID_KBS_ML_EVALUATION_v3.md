@@ -1,8 +1,4 @@
-# Đánh Giá Chi Tiết Hệ Thống Hybrid KBS+ML v3.0 (7 Bước)
-
-> **Dự án:** Hybrid Career AI System  
-> **Phiên bản:** 3.0 (KHTN/KHXH, 2 khối)  
-> **Ngày đánh giá:** 29/04/2026  
+# Đánh Giá Chi Tiết Hệ Thống Hybrid KBS+ML
 
 ---
 
@@ -15,17 +11,17 @@ Phân rõ: cái nào học từ dữ liệu, cái nào dùng tri thức chuyên 
 
 | Thành Phần | Vai Trò | Cơ Chế |
 |-----------|---------|--------|
-| **ML (Random Forest)** | Dự đoán xác suất phù hợp từ dữ liệu | `rf_model_khtn/khxh.pkl` → `predict_proba()` |
+| **ML (Random Forest)** | Dự đoán xác suất phù hợp từ dữ liệu | `models/rf_model_khtn.pkl` / `models/rf_model_khxh.pkl` → `predict_proba()` |
 | **KBS (JSON Rules)** | Đánh giá dựa luật, cung cấp giải thích | `rules_config.json` → conflict resolution |
-| **Hybrid Fusion** | Kết hợp 60% ML + 40% KBS | `hybrid_fusion.py` → (0.6×ML + 0.4×KBS) |
-| **VETO Mechanism** | KBS phủ quyết ML khi phát hiện bất hợp lý | Kiểm tra ngưỡng key subject < 4.0 |
+| **Hybrid Fusion** | Kết hợp 60% ML + 40% KBS | `kbs/hybrid_fusion.py` → (0.6×ML + 0.4×KBS) |
+| **VETO Mechanism** | KBS phủ quyết ML khi phát hiện bất hợp lý | KBS thấp + ML cao + môn trọng tâm theo khối < 4.0 (`hybrid_fusion.check_kbs_veto`) |
 
 ### Đánh Giá: ⭐ **EXCELLENT**
 
 - ✅ **Phân chia rõ ràng:** ML dự đoán (data-driven), KBS giải thích (expert-driven)
 - ✅ **VETO mechanism:** Bảo vệ output không hợp lý (VD: IT nhưng Lý = 2)
-- ✅ **Fallback:** Nếu ML lỗi → 100% KBS (có đảm bảo hệ thống hoạt động)
-- ✅ **Weights tuned:** 60/40 được validate qua experiments.py
+- ✅ **Fallback:** Nếu không load được model → hybrid chỉ còn KBS (`ml_score` None)
+- ✅ **Weights:** 60/40 trong `hybrid_fusion`; thử nghiệm bổ sung có thể dùng `experiments.py`
 
 ### Điểm Mạnh
 - Tách biệt rõ ràng dễ maintain
@@ -47,22 +43,22 @@ Dữ liệu sạch, chuẩn hóa, cân bằng, gắn nhãn đúng.
 
 | Tiêu Chí | Chi Tiết | Đánh Giá |
 |----------|----------|----------|
-| **Nguồn** | diem_thi_thpt_2024.csv (THPT 2024 chính thức) | ✅ Đáng tin cây |
-| **Kích thước** | KHTN: 30-50K, KHXH: 30-50K | ⚠ Nhỏ hơn cũ (160K) |
+| **Nguồn** | `data/diem_thi_thpt_2024.csv` (THPT 2024) | ✅ Đáng tin cây |
+| **Kích thước** | Phụ thuộc CSV gốc; sau `scripts/create_data.py` các lớp được **cân bằng** (undersampling) | ✅ Ổn định cho train |
 | **Features** | 6 môn (bắt buộc 3 + tự chọn 3) | ✅ Hợp lý, phù hợp quy định |
 | **Phạm vi** | [0, 10] (chuẩn THPT) | ✅ Chuẩn |
 | **Missing Values** | Rất ít (< 1%) | ✅ Sạch |
 | **Outliers** | Rất ít (hệ thống chính thức) | ✅ Sạch |
-| **Cân Bằng Lớp** | Tự nhiên theo nhu cầu (KT >> NLN) | ⚠ Không cân bằng tuyệt đối |
-| **Gắn Nhãn** | Dựa trên quy luật KBS (chính xác) | ✅ Chính xác |
+| **Cân Bằng Lớp** | `scripts/create_data.py` cân bằng theo lớp nhỏ nhất trong khối | ✅ Cân bằng cho RF |
+| **Gắn Nhãn** | Heuristic trong `scripts/create_data.py` (assign_major_khtn / khxh) | ⚠ Cần validate ngoài thực tế |
 
 ### Đánh Giá: ⭐ **GOOD** (8/10)
 
 - ✅ **Dữ liệu thực tế** từ THPT 2024 (không synthetic)
-- ✅ **Phân bố tự nhiên** phản ánh thực tế nhu cầu ngành
+- ✅ **Cân bằng lớp** trước khi train (giảm bias tần suất heuristic)
 - ✅ **Sạch & chuẩn** (ít missing/outliers)
-- ⚠ **Cỡ mẫu nhỏ** (30-50K/khối) - cần cộng multi-year
-- ⚠ **Không cân bằng** - KT: 35% vs NLN (KHTN): 15%
+- ⚠ **Heuristic nhãn** không thay thế khảo sát chuyên gia
+- ⚠ **Một năm dữ liệu** — có thể mở rộng nhiều năm nếu có file tương tự
 
 ### Điểm Mạnh
 - Real data từ THPT 2024
@@ -70,18 +66,8 @@ Dữ liệu sạch, chuẩn hóa, cân bằng, gắn nhãn đúng.
 - Phạm vi [0-10] chuẩn THPT
 
 ### Cần Cải Thiện
-```bash
-# Cộng dữ liệu 2022, 2023, 2024, 2025
-python combine_years.py --output data_all_years.csv
-
-# Phân tích phân bố
-data.groupby('nganh_id').size().plot(kind='bar')
-
-# Cân bằng (optional)
-from imblearn.over_sampling import RandomOverSampler
-ros = RandomOverSampler()
-X_balanced, y_balanced = ros.fit_resample(X, y)
-```
+- Gom thêm năm (chuẩn bị pipeline ingest + cột thống nhất).
+- Đánh giá lại heuristic gán `nganh_hoc` so với lựa chọn thực tế của học sinh (nếu có khảo sát).
 
 ---
 
@@ -113,15 +99,7 @@ Chọn thuật toán phù hợp, đánh giá, tối ưu.
 
 ### Test Accuracy
 
-```
-KHTN:
-  CV Accuracy: 68.2% +/- 2.1%
-  Test Accuracy: 67.8%
-  
-KHXH:
-  CV Accuracy: 71.5% +/- 1.9%
-  Test Accuracy: 71.1%
-```
+**Số liệu phụ thuộc** lần chạy `scripts/train_model.py` trên máy và bộ dữ liệu hiện có. Không hard-code trong repo; xem log cuối của quá trình train (CV mean/std, test accuracy).
 
 ### Điểm Mạnh
 - Random Forest ổn định
@@ -168,14 +146,14 @@ Tập hợp kiến thức, xây dựng luật, conflict resolution.
 | **Conflict Res** | Specificity → Score | ✅ Logic rõ ràng |
 | **Validation** | Chưa qua expert | ⚠ Cần workshop |
 | **Giải thích** | Tiếng Việt chi tiết | ✅ Tốt |
-| **Forward Chain** | Chưa có | ⚠ Optional enhancement |
+| **Forward Chain** | `chaining_rules` trong `rules_config.json` + `forward_chain()` | ✅ Có |
 
 ### Đánh Giá: ⭐ **EXCELLENT** (8.5/10)
 
 - ✅ **JSON-based** dễ cập nhật không cần code
 - ✅ **Conflict resolution** logic rõ ràng (specificity > score)
 - ✅ **Giải thích** chi tiết bằng Tiếng Việt
-- ⚠ **Chưa validate** - cần 15 giáo viên review
+- ⚠ **Chưa validate ngoài thực tế** — nên workshop chuyên gia
 - ⚠ **Soft thresholds** (fuzzy) chưa có
 
 ### KBS Rules Sample
@@ -227,7 +205,7 @@ Công thức kết hợp hợp lý, tối ưu weights.
 
 ### Đánh Giá: ⭐ **EXCELLENT** (8/10)
 
-- ✅ **Weights 60/40** balanced tốt (exp.py validate)
+- ✅ **Weights 60/40** cố định trong `hybrid_fusion`; có thể thử nghiệm trong `experiments.py`
 - ✅ **VETO mechanism** bảo vệ outliers
 - ✅ **Normalize** đúng (clip không scale)
 - ✅ **Fallback** to KBS nếu ML fail
@@ -282,64 +260,25 @@ Metrics: accuracy, precision, recall, F1, user satisfaction.
 
 ### Hiện Trạng v3.0
 
-| Metric | KHTN | KHXH | Target | Status |
-|--------|------|------|--------|--------|
-| **Top-1 Accuracy** | 67.8% | 71.1% | ≥70% | ⚠ Gần |
-| **Top-2 Accuracy** | 82.5% | 85.2% | ≥85% | ✅ Đạt |
-| **Precision (avg)** | 0.68 | 0.71 | ≥70% | ⚠ Gần |
-| **Recall (avg)** | 0.68 | 0.71 | ≥70% | ⚠ Gần |
-| **F1-Score (avg)** | 0.67 | 0.70 | ≥70% | ⚠ Gần |
-| **ML Confidence** | 62.3% | 65.8% | ≥60% | ✅ Đạt |
-| **KBS Consistency** | 94.2% | 95.1% | ≥90% | ✅ Đạt |
-| **User Satisfaction** | ? | ? | ≥75% | ❓ Chưa test |
-| **Response Time** | 45ms | 48ms | <100ms | ✅ Tốt |
+| Metric | Nguồn | Ghi chú |
+|--------|--------|---------|
+| **Accuracy / F1 / ma trận nhầm lẫn** | `scripts/train_model.py`, `scripts/evaluate_model.py` | Chạy trên từng khối sau khi có `data/data_*.csv` và `models/rf_model_*.pkl` |
+| **Hybrid vs nhãn** | `scripts/evaluate_model.py` (tùy `EVAL_MAX_SAMPLES`) | Đo mức hybrid “đồng ý” với nhãn heuristic |
+| **User Satisfaction** | Chưa có khảo sát | ❓ |
 
-### Đánh Giá: ⭐ **GOOD** (7.5/10)
+### Đánh Giá: ⭐ **GOOD** (7.5/10) — định tính
 
-- ✅ **Top-2 Accuracy** ≥ 85% (tốt)
-- ✅ **Response time** < 100ms
-- ⚠ **Top-1 Accuracy** 67.8% vs target 70%
+- ✅ Pipeline đánh giá ML + hybrid có trong repo
+- ⚠ Không gắn số đích danh trong tài liệu (tránh lệch với từng lần train)
 - ❓ **User satisfaction** chưa test với thực tế
 
-### Hiệu Suất Chi Tiết KHTN
+### Hiệu Suất Chi Tiết
 
-```
-Confusion Matrix (Top-1):
-                Pred: IT  KT   Y   KT   NLN
-Actual: IT        68%   15%  8%   6%   3%
-        KT        18%   70%  5%   4%   3%
-        Y         12%   8%   72%  5%   3%
-        KT        14%   9%   6%   66%  5%
-        NLN       16%   12%  7%   9%   56%
-
-→ Diagonal cao → tốt
-→ Off-diagonal có pattern (VD: IT/KT nhầm) → xem xét
-
-Recall per class:
-  IT: 68% (tốt)
-  KT: 70% (tốt)
-  Y: 72% (tốt)
-  KT: 66% (cần cải thiện)
-  NLN: 56% (yếu) ← class imbalance
-```
-
-### Điểm Mạnh
-- Top-2 accuracy tốt
-- Response time nhanh
-- KBS consistency cao
+Xem classification report / confusion matrix in ra khi chạy `scripts/train_model.py` và phần hybrid trong `scripts/evaluate_model.py`.
 
 ### Cần Cải Thiện
-```python
-# Improve recall cho NLN (class imbalance)
-from imblearn.over_sampling import RandomOverSampler
-ros = RandomOverSampler(sampling_strategy=0.8)
-X_balanced, y_balanced = ros.fit_resample(X_train, y_train)
-rf_balanced = RandomForestClassifier(**RF_PARAMS)
-rf_balanced.fit(X_balanced, y_balanced)
-
-# User satisfaction survey
-# "Bạn chọn ngành gì? Kết quả gợi ý có giúp không?"
-```
+- Thu thập feedback người dùng thật để đo satisfaction.
+- Sau khi có nhiều năm dữ liệu, đánh giá lại drift và calibration.
 
 ---
 
@@ -352,7 +291,7 @@ Optimize hiệu suất, chuẩn bị production.
 
 | Item | Status | Ghi Chú |
 |------|--------|---------|
-| **Code Optimization** | ✅ | Caching model, vectorized operations |
+| **Code Optimization** | ✅ | Cache model/KBS engine theo khối trong `hybrid_fusion` (`load_ml_model`, `_get_kbs_engine`) |
 | **Logging** | ⚠ | Basic, cần structured logging |
 | **Monitoring** | ⚠ | Chưa có dashboard |
 | **Error Handling** | ✅ | Try/catch tốt |
@@ -441,7 +380,7 @@ Optimize hiệu suất, chuẩn bị production.
 
 ---
 
-**Đánh giá:** 29/04/2026  
+**Đánh giá:** 30/04/2026  
 **Phiên bản:** 3.0  
 **Kết luận:** ✅ **PRODUCTION READY** (with conditions)  
 **Reviewer:** Hybrid KBS-ML Team

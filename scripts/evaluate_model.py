@@ -3,14 +3,25 @@
 Bước 6: Đánh giá hệ thống tổng thể - so sánh độ chính xác của ML vs Hybrid
 """
 
-import pickle
 import os
+import sys
+from pathlib import Path
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    classification_report,
+    confusion_matrix,
+)
 import logging
-from config import (
+REPO_ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(REPO_ROOT))
+
+from kbs.config import (
     TEST_SIZE,
     RANDOM_STATE,
     get_data_path,
@@ -19,7 +30,7 @@ from config import (
     NGANH_HOC_MAP,
     MAJOR_NAMES,
 )
-from hybrid_fusion import calculate_hybrid_score, load_ml_model
+from kbs.hybrid_fusion import calculate_hybrid_score, load_ml_model
 
 # Cấu hình logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -62,6 +73,8 @@ def evaluate_ml_only(block, model, X_test, y_test):
     )
     print_classification_report(report, target_names, labels=labels)
 
+    cm = confusion_matrix(y_test, y_pred, labels=labels).tolist()
+
     return {
         'accuracy': accuracy,
         'precision': precision_macro,
@@ -70,6 +83,59 @@ def evaluate_ml_only(block, model, X_test, y_test):
         'y_pred': y_pred,
         'report': report,
         'labels': labels,
+        'confusion_matrix': cm,
+    }
+
+
+def evaluate_block(block: str, *, max_samples: int | None = None) -> dict:
+    """
+    Evaluate ML-only and Hybrid for a single block and return metrics.
+
+    This is a programmatic wrapper used by `retrain_pipeline.py`.
+    """
+    df = pd.read_csv(get_data_path(block))
+    features = get_features(block)
+    X = df[features]
+    y = df["nganh_hoc"]
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X,
+        y,
+        test_size=TEST_SIZE,
+        random_state=RANDOM_STATE,
+        stratify=y,
+    )
+
+    model = load_ml_model(block)
+    if model is None:
+        raise RuntimeError(f"Không load được ML model cho block={block}")
+
+    ml_results = evaluate_ml_only(block, model, X_test, y_test)
+    hybrid_results = evaluate_hybrid_system(block, model, X_test, y_test, max_samples=max_samples)
+
+    return {
+        "block": block,
+        "num_test": int(len(X_test)),
+        "num_hybrid_eval": int(min(len(X_test), max_samples)) if max_samples else int(len(X_test)),
+        "labels": ml_results.get("labels"),
+        "label_names": [NGANH_HOC_MAP[int(i)] for i in (ml_results.get("labels") or [])],
+        "ml": {
+            "accuracy": float(ml_results["accuracy"]),
+            "precision": float(ml_results["precision"]),
+            "recall": float(ml_results["recall"]),
+            "f1": float(ml_results["f1"]),
+            "report": ml_results.get("report"),
+            "confusion_matrix": ml_results.get("confusion_matrix"),
+        },
+        "hybrid": {
+            "accuracy": float(hybrid_results["accuracy"]),
+            "precision": float(hybrid_results["precision"]),
+            "recall": float(hybrid_results["recall"]),
+            "f1": float(hybrid_results["f1"]),
+            "avg_hybrid_score": float(np.mean(hybrid_results["hybrid_scores"])) if hybrid_results.get("hybrid_scores") else None,
+            "report": hybrid_results.get("report"),
+            "confusion_matrix": hybrid_results.get("confusion_matrix"),
+        },
     }
 
 
@@ -141,6 +207,8 @@ def evaluate_hybrid_system(block, model, X_test, y_test, max_samples=None):
     )
     print_classification_report(report, target_names, labels=labels)
 
+    cm = confusion_matrix(y_iter, y_pred_hybrid, labels=labels).tolist()
+
     return {
         'accuracy': accuracy,
         'precision': precision_macro,
@@ -150,6 +218,7 @@ def evaluate_hybrid_system(block, model, X_test, y_test, max_samples=None):
         'hybrid_scores': hybrid_scores,
         'report': report,
         'labels': labels,
+        'confusion_matrix': cm,
     }
 
 

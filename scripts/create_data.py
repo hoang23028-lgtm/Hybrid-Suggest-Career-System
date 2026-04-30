@@ -12,9 +12,16 @@ Quy trình:
 """
 
 import logging
+import sys
+from pathlib import Path
 import pandas as pd
 import numpy as np
-from config import (
+
+# Ensure repo root is importable when running `python scripts/...`
+REPO_ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(REPO_ROOT))
+
+from kbs.config import (
     RAW_DATA_PATH, RAW_COLUMN_MAP,
     DATA_PATH_KHTN, DATA_PATH_KHXH,
     KHTN_FEATURES, KHXH_FEATURES,
