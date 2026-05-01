@@ -1,6 +1,6 @@
 """
 Tệp cấu hình chung cho Hệ thống AI Gợi ý Ngành Học
-Phiên bản 3.0: Kiến trúc 2 khối (KHTN/KHXH), không Tin học
+Kiến trúc 2 khối (KHTN/KHXH), không Tin học
 """
 
 # ============================================================================

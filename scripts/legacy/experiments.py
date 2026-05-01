@@ -1,6 +1,4 @@
 """
-Thử nghiệm & Đánh giá toàn diện - Experiments
-Bao gồm:
   1. Thử nghiệm tỷ lệ ML/KBS (tìm trọng số tối ưu)
   2. Hyperparameter tuning cho Random Forest
   3. So sánh ML rules vs Expert rules

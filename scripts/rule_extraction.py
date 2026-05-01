@@ -1,14 +1,4 @@
-"""
-Rule extraction (Step 4) for v3.
 
-Mục tiêu: trích xuất các đường đi (path-to-leaf) từ RandomForest (scikit-learn)
-để tạo **candidate rules** cho con người review trước khi đưa vào `rules_config.json`.
-
-Lưu ý quan trọng:
-- Decision tree dùng cả điều kiện `<=` và `>`; trong khi format KBS v3 dùng `AND` (>=)
-  hoặc `OR_LESS_THAN` (<). Vì vậy script này **không auto-merge** trực tiếp vào KBS,
-  mà xuất ra file review + JSON candidates.
-"""
 
 from __future__ import annotations
 
@@ -23,7 +13,7 @@ from typing import Any
 
 from sklearn.tree import _tree
 
-# Ensure repo root is importable when running `python scripts/...`
+
 REPO_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
@@ -32,7 +22,7 @@ from kbs.config import NGANH_HOC_MAP, get_features, get_majors, get_model_path
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-try:  # Windows terminals can default to a non-UTF8 codepage
+try: 
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
     if hasattr(sys.stderr, "reconfigure"):
@@ -90,14 +80,14 @@ class RuleExtractorV3:
                 walk(tree_.children_right[node], path + [(name, ">", threshold)])
                 return
 
-            # NOTE: tree_.value stores (weighted) class counts; use sum(value) for confidence.
+           
             samples = int(tree_.n_node_samples[node])
             value = tree_.value[node][0]  # shape (n_classes,)
             predicted_class_pos = int(value.argmax())
             denom = float(value.sum())
             confidence = float(value[predicted_class_pos] / denom) if denom > 0 else 0.0
 
-            # Map position -> real label if estimator trained with non-0..k labels.
+        
             classes = list(getattr(self.model, "classes_", []))
             if classes:
                 predicted_label = int(classes[predicted_class_pos])

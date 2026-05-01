@@ -1,0 +1,85 @@
+\chapter{Cơ sở lý thuyết và công nghệ}
+
+\section{Tổng quan về hệ gợi ý trong giáo dục}
+Hệ gợi ý (\textit{recommender system}) trong miền giáo dục hướng tới việc hỗ trợ người học hoặc phụ huynh lựa chọn hướng đào tạo phù hợp năng lực và nguyện vọng. Khác với thương mại điện tử---nơi tín hiệu hành vi mua sắm dồi dào---dữ liệu định hướng nghề thường thưa, nhạy cảm và chịu ảnh hưởng chính sách. Do đó, mô hình thuần học máy dễ thiếu giải thích, trong khi hệ luật cứng nhắc khó khái quát hóa cấu trúc phức tạp của điểm số thực tế. Hướng \textbf{lai ghép tri thức--dữ liệu} nhằm kết hợp ưu điểm: học từ mẫu và ràng buộc miền có diễn giải.
+
+\section{Bài toán học có giám sát và ký hiệu}
+Cho không gian đặc trưng $\mathcal{X} \subseteq [0,10]^d$ với $d=6$ môn theo khối, và không gian nhãn hữu hạn $\mathcal{Y}=\{y_1,\ldots,y_K\}$ tương ứng các ngành trong khối. Mục tiêu học là tìm ánh xạ $f:\mathcal{X}\rightarrow \Delta^{K-1}$ (simplex xác suất) sao cho hàm mất mát kỳ vọng
+\begin{equation}
+\mathbb{E}_{(x,y)\sim \mathcal{D}}\bigl[\ell(f(x),y)\bigr]
+\label{eq:risk}
+\end{equation}
+đạt giá trị nhỏ trên phân phối $\mathcal{D}$ của dữ liệu. Trong thực nghiệm, ta chỉ có tập hữu hạn $\{(x^{(n)},y^{(n)})\}_{n=1}^{N}$ và ước lượng rủi ro thực nghiệm bằng tách tập huấn/kiểm tra hoặc kiểm định chéo.
+
+\section{Rừng ngẫu nhiên (Random Forest)}
+\subsection{Nguyên lý cấu trúc}
+Random Forest \cite{breiman} là tập hợp $B$ cây quyết định $\{T_b\}_{b=1}^{B}$, mỗi cây huấn luyện trên tập con bootstrap của dữ liệu và tại mỗi nút tách chỉ xét ngẫu nhiên một tập con đặc trưng (\textit{random subspace}). Dự đoán hợp thành:
+\begin{equation}
+\hat{f}(x) = \frac{1}{B}\sum_{b=1}^{B} T_b(x) \quad \text{(hồi quy)} \qquad
+\hat{y}(x) = \arg\max_{c} \frac{1}{B}\sum_{b=1}^{B} \mathbf{1}\{T_b(x)=c\} \quad \text{(phân loại)}.
+\end{equation}
+Cơ chế ngẫu nhiên hóa làm giảm tương quan giữa các cây, từ đó \textbf{giảm phương sai} tổng hợp so với một cây đơn sâu.
+
+\subsection{Ưu điểm trong miền dữ liệu bảng}
+Trên dữ liệu dạng bảng số học với nhiễu nhỏ, RF thường ổn định, ít cần chuẩn hóa mạnh, và cung cấp độ đo \texttt{feature\_importances\_} dựa trên giảm chỉ số Gini hoặc entropy tích lũy. Điều này phù hợp báo cáo đồ án khi cần \textbf{giải thích định hướng} môn học nào ảnh hưởng tới phân lớp.
+
+\subsection{Siêu tham số và đánh đổi}
+Độ sâu tối đa \texttt{max\_depth}, số mẫu tối thiểu để tách \texttt{min\_samples\_split}, số mẫu tối thiểu ở lá \texttt{min\_samples\_leaf} điều khiển độ phức tạp và khả năng khái quát hóa. Tăng độ sâu giảm sai số huấn luyện nhưng có thể tăng overfitting; trong đồ án, bộ tham số cố định trong \texttt{RF\_PARAMS} là điểm khởi đầu; mở rộng tự động tìm kiếm lưới (\textit{grid search}) là hướng phát triển.
+
+\section{Hệ cơ sở tri thức dựa luật}
+\subsection{Biểu diễn luật và suy luận}
+Theo quan điểm hệ chuyên gia cổ điển \cite{jackson}, luật sản xuất có dạng nếu--thì trên miền biến quan sát được. Trong đồ án, mỗi luật gắn với tập ngưỡng trên tọa độ điểm môn, toán tử logic \texttt{AND} hoặc \texttt{OR\_LESS\_THAN}, và điểm số vừa ý. Suy luận tiến (\textit{forward chaining}) bổ sung điều chỉnh khi chuỗi điều kiện nền đã khớp.
+
+\subsection{Giải quyết xung đột}
+Khi nhiều luật cùng khớp, chiến lược \textit{specificity\_then\_score} phản ánh nguyên tắc: ưu tiên luật \textbf{cụ thể hơn} (nhiều điều kiện đồng thời), sau đó ưu tiên điểm luật cao hơn. Đây là dạng đơn giản của \textit{policy layer} trong hệ thống quy tắc nghiệp vụ.
+
+\section{Lai ghép học máy và tri thức chuyên gia}
+\subsection{Động cơ và công thức tuyến tính}
+Gọi $s^{\text{ML}}_i(x)$ và $s^{\text{KBS}}_i(x)$ là điểm thang $[0,100]$ của ngành $i$ từ hai nguồn. Lai ghép tuyến tính:
+\begin{equation}
+h_i(x) = w_m\, s^{\text{ML}}_i(x) + w_k\, s^{\text{KBS}}_i(x), \quad w_m,w_k \geq 0,\; w_m+w_k=1.
+\label{eq:fusion}
+\end{equation}
+Đồ án chọn $w_m=0{,}6$, $w_k=0{,}4$ theo cân bằng thực nghiệm nội bộ; có thể mở rộng trọng số phụ thuộc độ tin cậy ML.
+
+\subsection{Cơ chế VETO như ràng buộc an toàn}
+Khi ML tự tin cao nhưng KBS báo \textit{không phù hợp} và tồn tại môn trọng tâm quá thấp, hệ số chuyển về gần $(0{,}15,0{,}85)$ nghiêng về KBS. Đây là biện pháp \textbf{an toàn tri thức} tương tự nguyên tắc ghi đè lâm sàng trong hệ trợ quyết định y tế (minh họa khái niệm, không mở rộng miền y học trong đồ án).
+
+\section{Hiệu chuẩn xác suất và thang điểm}
+Đặt vector xác suất gốc $p$ từ \texttt{predict\_proba}. Hiệu chỉnh nhiệt độ $T\in(0,1)$:
+\begin{equation}
+\tilde{p}_i = \frac{p_i^{1/T}}{\sum_j p_j^{1/T}}.
+\end{equation}
+Giá trị $T<1$ làm phân phối ``sắc'' hơn; $T=0{,}75$ trong mã nguồn. Sau đó điểm ML được ánh xạ lên $[0,100]$ với đường cơ sở đồng đều $1/K$ để trừng phạt xác suất không vượt mức ngẫu nhiên.
+
+\section{Giải thích trong học máy (XAI) liên quan đồ án}
+Khái niệm \textit{explainable AI} gồm nhiều lớp: giải thích toàn cục (tầm quan trọng đặc trưng), giải thích cục bộ (vì sao một mẫu được phân loại). Đồ án cung cấp (i) độ quan trọng RF; (ii) luật và \texttt{reason} tiếng Việt; (iii) tách điểm ML/KBS trong kết quả lai. Đây là chiến lược \textbf{tường minh theo thiết kế} phù hợp báo cáo tốt nghiệp ngành CNTT.
+
+\section{Ngăn xếp công nghệ và chuẩn kỹ thuật phần mềm}
+Bảng \ref{tab:stack} liệt kê công nghệ; báo cáo tuân thủ tách lớp: cấu hình --- nghiệp vụ --- giao diện; mã nguồn có script tái lập pipeline; kiểm thử đơn vị cơ bản (\texttt{pytest}).
+
+\begin{table}[!htbp]
+\centering
+\caption{Công nghệ và vai trò trong đồ án}
+\label{tab:stack}
+\begin{tabular}{llp{7.2cm}}
+\toprule
+Thành phần & Ghi chú & Vai trò \\
+\midrule
+Python 3 & Ngôn ngữ chính & Triển khai toàn bộ pipeline \\
+Pandas & Xử lý bảng & Đọc/ghi CSV, thống kê \\
+scikit-learn & ML chuẩn & RF, chia tập, metric \\
+Streamlit & Web UI nhanh & \texttt{app.py} \\
+JSON & Schema luật & \texttt{rules\_config.json} \\
+Git & VCS & Theo dõi phiên bản \\
+SQLite & Tuỳ chọn & \texttt{metrics\_db.py} \\
+\bottomrule
+\end{tabular}
+\end{table}
+\FloatBarrier
+
+\section{Tiêu chuẩn đánh giá đồ án phần mềm}
+Theo thông lệ đánh giá đồ án ngành kỹ thuật: (1) \textbf{Đúng yêu cầu} chức năng; (2) \textbf{Tái lập được} kết quả; (3) \textbf{Có kiểm thử} tối thiểu; (4) \textbf{Tài liệu} đầy đủ; (5) \textbf{Thảo luận hạn chế} trung thực. Các chương sau chứng minh từng tiêu chí trên cơ sở repository \texttt{KBS}.
+
+\section{Tổng kết chương}
+Chương đã cố định ký hiệu toán, nhắc lại RF và KBS, mô tả lai ghép và XAI, đồng thời đặt đồ án trong khung công nghệ và tiêu chuẩn đánh giá phù hợp báo cáo tốt nghiệp.

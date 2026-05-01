@@ -10,7 +10,7 @@
 | Tiêu Chí | Điểm | Ghi Chú |
 |----------|------|--------|
 | Kiến Trúc | 8.5/10 | Tách biệt rõ KHTN/KHXH, JSON-based |
-| Dữ Liệu | 8/10 | THPT 2024; cỡ mẫu sau `scripts/create_data.py` phụ thuộc CSV, lớp được cân bằng |
+| Dữ Liệu | 8/10 | THPT 2024; cỡ mẫu sau `scripts/create_data.py` phụ thuộc CSV (và pipeline tạo dữ liệu) |
 | ML Model | 7.5/10 | Random Forest ổn định, chưa optimize |
 | KBS Engine | 8.5/10 | Conflict resolution tốt, JSON-based dễ maintain |
 | Hybrid Fusion | 8/10 | 60/40 weights, VETO mechanism |
@@ -60,7 +60,7 @@
 - ✓ Cấu trúc sạch (phạm vi, tên cột chuẩn)
 
 **Điểm cần cải thiện:**
-- ⚠ Nhãn `nganh_hoc` từ heuristic — cần đối chiếu thực tế nếu có khảo sát
+- ⚠ Nhãn `nganh_hoc` cần được định nghĩa/kiểm chứng (nếu là heuristic thì cần đối chiếu thực tế nếu có khảo sát)
 - ⚠ Chỉ 6 điểm môn (không có sở thích, năng lực khác)
 - ⚠ Dữ liệu một năm (mở rộng khi có thêm file các năm)
 - ⚠ Chưa validate với dữ liệu từ các nguồn khác

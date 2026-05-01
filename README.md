@@ -10,7 +10,7 @@
 | **KHXH** | Toán, Văn, Anh, Sử, Địa, GDCD | 4 | `models/rf_model_khxh.pkl` |
 
 - **Hybrid:** `Hybrid = 0.6 × ML + 0.4 × KBS` (có cơ chế **VETO** khi ML và KBS mâu thuẫn rõ rệt).
-- **Dữ liệu huấn luyện:** `data/diem_thi_thpt_2024.csv` → lọc theo khối → `scripts/create_data.py` → `data/data_khtn.csv` / `data/data_khxh.csv`.
+- **Dữ liệu huấn luyện:** `data/diem_thi_thpt_2024.csv` → lọc theo khối → `scripts/create_data.py` → `data/data_khtn.csv` / `data/data_khxh.csv` (cần có cột nhãn `nganh_hoc` để train/eval ML).
 - **Giao diện:** `app.py` (Streamlit): chọn khối → slider 6 môn → phân tích / xếp hạng.
 
 ## Cấu trúc thư mục (đã tổ chức lại)
@@ -83,11 +83,12 @@ pytest -q test_hybrid_fusion.py
 |-------------------|------------|
 | Không tìm thấy `models/rf_model_khtn.pkl` / `models/rf_model_khxh.pkl` | Chạy `python scripts/train_model.py` sau khi đã có `data/data_khtn.csv` và `data/data_khxh.csv`. |
 | Không có `data/data_khtn.csv` / `data/data_khxh.csv` | Chạy `python scripts/create_data.py` (cần `data/diem_thi_thpt_2024.csv`). |
+| Lỗi `KeyError: 'nganh_hoc'` khi train/eval | Đảm bảo `data/data_*.csv` có cột nhãn `nganh_hoc` (theo `kbs/config.py:NGANH_HOC_MAP`). |
 | Cổng Streamlit đã dùng | `streamlit run app.py --server.port 8502` |
 
 ## Tài liệu chi tiết (v3)
 
-- [DATASET_v3.md](docs/DATASET_v3.md) — Nguồn dữ liệu, cột, pipeline `scripts/create_data.py`
+- [DATASET_v3.md](docs/DATASET_v3.md) — Nguồn dữ liệu, cột, pipeline dữ liệu
 - [KBS_AI_DETAIL_v3.md](KBS_AI_DETAIL_v3.md) — Luồng ML / KBS / hybrid theo `block`
 - [KNOWLEDGE_BASED_RULES_v3.md](KNOWLEDGE_BASED_RULES_v3.md) — Cấu trúc `rules_config.json`
 - [HYBRID_KBS_ML_EVALUATION_v3.md](HYBRID_KBS_ML_EVALUATION_v3.md) — Khung đánh giá 7 bước

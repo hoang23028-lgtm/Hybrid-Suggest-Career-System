@@ -1,6 +1,6 @@
 """
 Huấn luyện mô hình Random Forest cho dự đoán ngành học
-Phiên bản 3.0: Train 2 model riêng cho KHTN và KHXH
+Train 2 model riêng cho KHTN và KHXH
 """
 
 import pickle
@@ -27,8 +27,8 @@ logger = logging.getLogger(__name__)
 def train_model(block):
     """Huấn luyện Random Forest Classifier cho 1 khối"""
     try:
-        data_path = get_data_path(block)
-        model_path = get_model_path(block)
+        data_path = str(REPO_ROOT / get_data_path(block))
+        model_path = str(REPO_ROOT / get_model_path(block))
         feature_names = get_features(block)
         major_indices = get_majors(block)
         

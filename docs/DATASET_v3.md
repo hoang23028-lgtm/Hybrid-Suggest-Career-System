@@ -73,24 +73,22 @@ Dự án sử dụng dữ liệu từ **Kỳ thi THPT 2024 Việt Nam**, chia th
 
 ### 4.1 Phân Bố Kích Thước
 
-Số mẫu **phụ thuộc** file `data/diem_thi_thpt_2024.csv` và điều kiện lọc (đủ 3 môn bắt buộc + 3 môn tự chọn theo khối). Sau đó `scripts/create_data.py` **cân bằng** các lớp ngành bằng undersampling về cỡ lớp nhỏ nhất trong khối.
+Số mẫu **phụ thuộc** file `data/diem_thi_thpt_2024.csv` và điều kiện lọc (đủ 3 môn bắt buộc + 3 môn tự chọn theo khối).
 
 | Khối | Thứ tự xử lý | Ghi chú |
 |------|----------------|---------|
-| KHTN | Lọc thí sinh có đủ Lý, Hóa, Sinh + Toán, Văn, Anh | Kích thước trước cân bằng thường lớn; sau cân bằng = `5 × min_count` |
-| KHXH | Lọc thí sinh có đủ Sử, Địa, GDCD + Toán, Văn, Anh | Tương tự; sau cân bằng = `4 × min_count` |
+| KHTN | Lọc thí sinh có đủ Lý, Hóa, Sinh + Toán, Văn, Anh | Kích thước phụ thuộc dữ liệu gốc và điều kiện lọc |
+| KHXH | Lọc thí sinh có đủ Sử, Địa, GDCD + Toán, Văn, Anh | Tương tự |
 
-Ví dụ một lần chạy điển hình: KHTN ~167k mẫu trước cân bằng → ~167k sau (5 ngành cân bằng); KHXH ~64k mẫu sau cân bằng (4 ngành). **Số liệu cụ thể xem log của `scripts/create_data.py`.**
+Ví dụ số liệu cụ thể xem log khi chạy pipeline tạo dữ liệu.
 
 ### 4.2 Phân Bố Ngành (KHTN)
 
-**Trước bước cân bằng:** tỷ lệ các lớp phụ thuộc heuristic gán nhãn trên tập thí sinh đã lọc (thường lệch).
-
-**Sau `scripts/create_data.py`:** mỗi ngành trong khối có **cùng số mẫu** (undersampling theo lớp nhỏ nhất) để huấn luyện RF ổn định.
+Phân bố nhãn (nếu có) phụ thuộc vào cách gán nhãn và nguồn nhãn sử dụng.
 
 ### 4.3 Phân Bố Ngành (KHXH)
 
-Tương tự KHTN: **sau cân bằng**, 4 ngành KHXH có cùng số mẫu trong `data/data_khxh.csv`.
+Tương tự KHTN.
 
 ---
 
@@ -138,7 +136,7 @@ Mỗi ngành có 4 mức: Very_Fit (95), Fit (80), Medium (65), Not_Fit (20)
 
 ### 6.1 Pipeline Xử Lý
 
-Pipeline thực tế nằm trong **`scripts/create_data.py`**:
+Pipeline tạo dữ liệu nằm trong **`scripts/create_data.py`**:
 
 ```
 Raw Data (data/diem_thi_thpt_2024.csv)
@@ -147,14 +145,12 @@ Raw Data (data/diem_thi_thpt_2024.csv)
     ↓
 [2] Lọc theo khối: đủ 6 môn tương ứng (không dùng tin_hoc)
     ↓
-[3] Gán nhãn nganh_hoc bằng heuristic (assign_major_khtn / assign_major_khxh)
+[3] (Tuỳ dataset) đảm bảo có cột nhãn \texttt{nganh\_hoc} nếu dùng train/eval ML
     ↓
-[4] Cân bằng lớp (undersampling về min class trong khối)
-    ↓
-[5] Lưu → data/data_khtn.csv, data/data_khxh.csv
+[4] Lưu → data/data_khtn.csv, data/data_khxh.csv
 ```
 
-**Cột nhãn trong CSV đã xử lý:** `nganh_hoc` (số nguyên trùng với chỉ số trong `config.NGANH_HOC_MAP`).
+**Lưu ý về nhãn:** các script train/eval (`scripts/train_model.py`, `scripts/evaluate_model.py`) yêu cầu cột `nganh_hoc` (số nguyên trùng với chỉ số trong `kbs/config.py:NGANH_HOC_MAP`). Nếu bạn tự tạo CSV, hãy đảm bảo cột này tồn tại.
 
 ### 6.2 Missing Values
 

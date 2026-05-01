@@ -235,7 +235,7 @@ RF_PARAMS = {
 # [1] Load data
 data = pd.read_csv(get_data_path(block))
 X = data[get_features(block)]  # 6 features
-y = data["nganh_hoc"]          # nhãn ngành (theo scripts/create_data.py)
+y = data["nganh_hoc"]          # nhãn ngành (theo NGANH_HOC_MAP)
 
 # [2] Split 80/20
 X_train, X_test, y_train, y_test = train_test_split(

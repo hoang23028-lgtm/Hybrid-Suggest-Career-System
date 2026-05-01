@@ -1,0 +1,34 @@
+\chapter{Kết luận và hướng phát triển}
+
+\section{Kết luận}
+Đồ án đã phân tích, hiện thực và đánh giá hệ thống gợi ý ngành học lai ghép KBS--ML trên dữ liệu điểm THPT 2024 trong repository \texttt{KBS}. Các kết luận chính:
+
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Dữ liệu:} Pipeline \texttt{scripts/create\_data.py} tạo hai tập cân bằng: KHTN $167\,490$ mẫu (năm lớp đều $33\,498$); KHXH $63\,848$ mẫu (bốn lớp đều $15\,962$), kèm thống kê mô tả sáu đặc trưng từng khối (chương 3).
+  \item \textbf{KBS:} Luật được mã hóa JSON, có giải quyết xung đột theo \texttt{specificity} và \texttt{score}, có chuỗi suy luận bổ sung; bảng tóm tắt ngưỡng KHTN/KHXH trình bày đầy đủ trong chương 4.
+  \item \textbf{Học máy:} Random Forest với siêu tham số cố định đạt độ chính xác trên tập kiểm tra (chia 80/20, \texttt{random\_state=42}) khoảng \textbf{96,45\%} (KHTN) và \textbf{97,97\%} (KHXH), macro F1 tương ứng; độ quan trọng đặc trưng cho thấy Lý--Sinh (KHTN) và Anh (KHXH) chi phối mạnh (chương 5--7).
+  \item \textbf{Lai ghép:} Công thức $0{,}6\,\text{ML}+0{,}4\,\text{KBS}$ kết hợp VETO; trên \textbf{2000} mẫu kiểm tra đầu tiên, hybrid đạt khoảng \textbf{91,0\%} (KHTN) và \textbf{97,7\%} (KHXH), phản ánh đánh đổi giữa khớp nhãn heuristic và ràng buộc tri thức (chương 7).
+\end{enumerate}
+
+\section{Đóng góp của đồ án}
+\begin{itemize}[leftmargin=*]
+  \item Hoàn thiện báo cáo kỹ thuật song song với mã nguồn, đáp ứng tiêu chí \textit{tái lập được} và \textit{minh bạch hóa} các giả định nhãn.
+  \item Hệ thống chạy được trên máy trạm với giao diện Streamlit, phù hợp minh họa hội đồng.
+  \item Chuẩn hóa ký hiệu toán và giải thích VETO/XAI phục vụ người đọc không trực tiếp đọc mã.
+\end{itemize}
+
+\section{Hạn chế}
+Nhãn heuristic; một năm dữ liệu; luật chưa qua hội đồng chuyên gia giáo dục; chưa có khảo sát người dùng thật; chi phí suy luận hybrid theo từng mẫu lớn khi mở rộng tập; script \texttt{evaluate\_model.py} khi giới hạn mẫu cần đồng bộ độ dài vector với phân tích độ tin cậy (đã được chỉnh trong mã nguồn).
+
+\section{Hướng phát triển ngắn hạn}
+\begin{itemize}[leftmargin=*]
+  \item Tinh chỉnh lưới siêu tham số RF và so sánh với XGBoost/LightGBM trên cùng pipeline đánh giá.
+  \item Tổ chức phiên hiệu đính luật với giáo viên bộ môn, lưu phiên bản JSON có trường \texttt{validation\_status}.
+  \item Bổ sung kiểm thử tích hợp cho API nội bộ nếu triển khai FastAPI.
+\end{itemize}
+
+\section{Hướng phát triển trung và dài hạn}
+Gom dữ liệu nhiều năm; trọng số lai ghép phụ thuộc entropy; fuzzy rule; dashboard giám sát drift; container hóa triển khai; mở rộng sang gợi ý chương trình đào tạo cụ thể theo trường khi có CSDL liên kết.
+
+\section{Lời kết}
+Lai ghép tri thức chuyên gia và học máy là hướng khả thi cho bài toán gợi ý có giải thích trong giáo dục. Kết quả định lượng trong đồ án là điểm khởi đầu; chất lượng thực địa phụ thuộc vòng lặp phản hồi với người dùng và chuyên gia.

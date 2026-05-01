@@ -1,0 +1,32 @@
+\chapter{Cập nhật, tái huấn luyện và quan trắc}
+
+\section{Pipeline tái huấn luyện}
+Script \texttt{scripts/retrain\_pipeline.py} gom các bước: tạo lại dữ liệu (tuỳ chọn bỏ qua), huấn luyện theo từng khối, gọi đánh giá, ghi metric vào cơ sở SQLite qua \texttt{kbs/metrics\_db.py}, tính băm SHA-256 của file dữ liệu và model để truy vết phiên bản. Ví dụ gọi từ shell:
+\begin{lstlisting}
+python scripts/retrain_pipeline.py --blocks khtn khxh --eval-max-samples 2000
+python scripts/retrain_pipeline.py --skip-data --extract-rules
+\end{lstlisting}
+
+\section{Quản lý phiên bản tri thức}
+Luật KBS sống trong \texttt{rules\_config.json}; quy trình khuyến nghị là pull request có mô tả thay đổi ngưỡng, kèm ví dụ điểm minh họa trước/sau khi tính \texttt{get\_hybrid\_ranking}. Nên bổ sung trường siêu dữ liệu \texttt{validation\_status} theo gợi ý trong \cite{docs_eval} khi tổ chức workshop chuyên gia.
+
+\section{Cập nhật dữ liệu đa năm}
+Khi có thêm file điểm các năm khác, cần thống nhất lược đồ cột, mã môn và quy tắc tổ hợp môn tự chọn. Pipeline \texttt{create\_data.py} nên được tham số hóa đường dẫn nguồn và năm, lưu song song cột \texttt{nam\_thi} để huấn luyện có trọng số theo thời gian hoặc phát hiện drift.
+
+\section{Quan trắc và cảnh báo}
+Module metric ghi lại run id UTC, độ chính xác, F1; hàm \texttt{alert\_if\_degraded} so sánh với ngưỡng tối thiểu. Trong môi trường sản xuất nên đẩy log sang hệ thống tập trung (ELK, OpenSearch) và gắn dashboard (Grafana) theo roadmap \cite{docs_eval}.
+
+\section{Kiểm thử hồi quy}
+\texttt{pytest -q test\_hybrid\_fusion.py} kiểm tra các invariant fusion; nên mở rộng với bảng test tham số hóa từ file JSON nhỏ để phát hiện lệch ngưỡng sau chỉnh sửa luật.
+
+\section{An toàn và tuân thủ}
+Dữ liệu điểm thi là dữ liệu nhạy cảm cá nhân nếu gắn định danh; bản báo cáo này chỉ dùng thống kê tổng hợp. Khi triển khai công khai cần ẩ danh, chính sách lưu trữ và đồng ý sử dụng rõ ràng.
+
+\section{Quy trình phát hành phiên bản (gợi ý)}
+Theo chuẩn kỹ nghệ phần mềm cho đồ án có khả năng triển khai: (1) nhánh Git theo tính năng; (2) kiểm thử tự động trên pull request; (3) gắn nhãn phiên bản semantic \texttt{v3.x.y}; (4) ghi changelog ngắn trong \texttt{README} hoặc \texttt{docs/}.
+
+\section{Bàn giao và tài liệu vận hành}
+Danh sách kiểm tra bàn giao (\textit{handover checklist}): môi trường Python và phiên bản thư viện; đường dẫn dữ liệu; lệnh tái huấn; cổng Streamlit; vị trí file log/metric. Phụ lục trích cấu hình giúp người bảo trì sau nhanh chóng đối chiếu.
+
+\section{Tổng kết chương}
+Vòng đời ``dữ liệu $\rightarrow$ huấn luyện $\rightarrow$ đánh giá $\rightarrow$ ghi nhận'' đã có khung mã; phần còn lại là tự động hóa trên máy chủ build và giám sát hiện trường.

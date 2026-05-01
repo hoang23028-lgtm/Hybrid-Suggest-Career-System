@@ -1,0 +1,127 @@
+\chapter{Phụ lục kỹ thuật và trích dẫn mã}
+
+\section{Tham số Random Forest (\texttt{kbs/config.py})}
+\begin{lstlisting}[language=Python]
+RF_PARAMS = {
+    'n_estimators': 100,
+    'max_depth': 15,
+    'min_samples_split': 10,
+    'min_samples_leaf': 5,
+    'random_state': 42,
+    'n_jobs': -1,
+}
+TEST_SIZE = 0.2
+CV_FOLDS = 5
+RANDOM_STATE = 42
+\end{lstlisting}
+
+\section{Ánh xạ cột dữ liệu gốc (\texttt{RAW\_COLUMN\_MAP})}
+\begin{table}[htbp]
+\centering
+\caption{Đổi tên cột từ CSV gốc sang tên nội bộ}
+\begin{tabular}{ll}
+\toprule
+Cột gốc & Cột nội bộ \\
+\midrule
+\texttt{ngu\_van} & \texttt{van} \\
+\texttt{ngoai\_ngu} & \texttt{anh} \\
+\texttt{vat\_li} & \texttt{ly} \\
+\texttt{hoa\_hoc} & \texttt{hoa} \\
+\texttt{sinh\_hoc} & \texttt{sinh} \\
+\texttt{lich\_su} & \texttt{lich\_su} \\
+\texttt{dia\_li} & \texttt{dia\_ly} \\
+\texttt{gdcd} & \texttt{gdcd} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Hằng số fusion và VETO (\texttt{kbs/hybrid\_fusion.py})}
+\begin{lstlisting}[language=Python]
+ML_WEIGHT = 0.6
+KBS_WEIGHT = 0.4
+VETO_KBS_NOT_FIT_THRESHOLD = 20
+VETO_ML_HIGH_THRESHOLD = 60
+VETO_KEY_SUBJECT_MIN = 4.0
+VETO_KBS_DOMINANT_WEIGHT = 0.85
+\end{lstlisting}
+Trong hàm tính điểm ML, nhiệt độ hiệu chuẩn hóa được đặt \texttt{temperature = 0.75} (hằng số cục bộ trong mã).
+
+\section{Rút gọn logic gán nhãn KHTN (diễn giải mã)}
+\begin{lstlisting}[language=Python]
+# Uu tien theo nhom dieu kien; chon nganh co score uu tien lon nhat
+if toan >= 8 and ly >= 8:
+    scores[3] = toan + ly + hoa * 0.5   # Ky thuat
+if sinh >= 7.5 and hoa >= 7.5:
+    scores[2] = sinh + hoa + ly * 0.5 # Y khoa
+if toan >= 7.5 and ly >= 7:
+    scores[0] = toan + ly + anh * 0.3 # IT
+if sinh >= 7 and hoa >= 7:
+    scores[4] = sinh + hoa              # Nong - Lam - Ngu
+if toan >= 6 and anh >= 7:
+    scores[1] = toan + anh + van * 0.3 # Kinh te
+if scores:
+    return max(scores, key=scores.get)
+# ... fallback tong hop neu khong nhanh
+\end{lstlisting}
+
+\section{Lệnh tái tạo kết quả số liệu}
+Từ thư mục gốc repository (có \texttt{data/data\_*.csv} và \texttt{models/*.pkl}):
+\begin{lstlisting}[language=bash]
+pip install -r requirements.txt
+python -c "import pandas as pd; ..."
+streamlit run app.py
+\end{lstlisting}
+Đo độ chính xác RF: tải pickle, \texttt{predict} trên tập test stratified. Đo hybrid mẫu con: lặp \texttt{calculate\_hybrid\_score} như trong chương 7.
+
+\section{Bảng ánh xạ nhãn số $\rightarrow$ tên đầy đủ}
+\begin{table}[htbp]
+\centering
+\begin{tabular}{cl}
+\toprule
+Mã & Tên ngành trong \texttt{NGANH\_HOC\_MAP} \\
+\midrule
+0 & IT - Công nghệ thông tin \\
+1 & Kinh tế - Kinh doanh \\
+2 & Y khoa - Sức khỏe \\
+3 & Kỹ thuật - Xây dựng \\
+4 & Nông - Lâm - Ngư \\
+5 & Sư phạm - Giáo dục \\
+6 & Luật pháp \\
+7 & Du lịch - Khách sạn \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Ghi chú biên dịch \LaTeX}
+Dùng \texttt{xelatex} vì gói \texttt{fontspec}. Nếu không có Times New Roman, đổi lệnh \texttt{\textbackslash setmainfont} trong \texttt{main.tex}. Tắt font CJK trùng nếu máy báo lỗi. Với số có dấu phẩy thập phân tiếng Việt, báo cáo dùng dấu \texttt{\{,\}} trong mode toán hoặc viết ``0{,}91'' trong văn bản thường.
+
+\section{Ví dụ chuỗi suy luận (\texttt{chaining\_rules}) --- KHXH}
+Trích ý tưởng từ \texttt{rules\_config.json}: sau khi khớp \texttt{KinhTe\_Very\_Fit} hoặc \texttt{KinhTe\_Fit}, nếu Anh $\geq 8$ thì cộng thưởng (\textit{bonus}) cho hướng Kinh tế quốc tế. Các chuỗi tương tự định nghĩa cho Sư phạm, Luật, Du lịch. Việc cộng điểm thưởng giúp phân tầng gợi ý trong cùng một ngành mà không tạo thêm lớp phân loại mới.
+
+\section{Kịch bản kiểm thử thủ công (UAT gợi ý)}
+\begin{enumerate}[leftmargin=*]
+  \item Nhập vector toàn điểm 10 cho KHTN; kiểm tra thứ tự xếp hạng và tổng điểm lai hợp lý (không âm, không vượt 100 sau clip nội bộ).
+  \item Nhập trường hợp một môn trọng tâm rất thấp nhưng các môn khác cao; xác nhận log hoặc giải thích ghi nhận VETO.
+  \item Đổi khối KHXH, lặp lại hai bước trên.
+  \item Tắt file model (\texttt{.pkl}) tạm thời; xác nhận ứng dụng báo lỗi thân thiện hoặc suy giảm về KBS tùy phiên bản mã.
+\end{enumerate}
+
+\section{Bảng checklist nộp đồ án (tham khảo)}
+\begin{table}[htbp]
+\centering
+\caption{Các hạng mục thường kiểm trước khi nộp hội đồng}
+\begin{tabular}{p{7cm}c}
+\toprule
+Hạng mục & Đạt \\
+\midrule
+Mã nguồn chạy được theo README & $\square$ \\
+Báo cáo PDF đủ chương, đánh số, mục lục tự sinh & $\square$ \\
+Trích dẫn tài liệu đầy đủ; tránh đạo văn & $\square$ \\
+Thảo luận trung thực hạn chế & $\square$ \\
+Phụ lục có hướng dẫn tái lập thí nghiệm & $\square$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Hướng dẫn bảo vệ slide (gợi ý)}
+Khuyến nghị cấu trúc 12--15 slide: (1) Đặt vấn đề; (2) Kiến trúc tổng thể; (3) Dữ liệu; (4) KBS; (5) RF; (6) Fusion/VETO; (7) Demo Streamlit (ảnh chụp màn hình); (8) Kết quả số; (9) Hạn chế; (10) Hướng phát triển; (11) Kết luận; (12) Q\&A.

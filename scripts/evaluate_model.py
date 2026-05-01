@@ -1,6 +1,6 @@
 """
-Đánh giá Hệ Thống Lai - So sánh ML vs Hybrid (Bước 6)
-Bước 6: Đánh giá hệ thống tổng thể - so sánh độ chính xác của ML vs Hybrid
+Đánh giá Hệ Thống Lai - So sánh ML vs Hybrid
+
 """
 
 import os
@@ -93,7 +93,7 @@ def evaluate_block(block: str, *, max_samples: int | None = None) -> dict:
 
     This is a programmatic wrapper used by `retrain_pipeline.py`.
     """
-    df = pd.read_csv(get_data_path(block))
+    df = pd.read_csv(str(REPO_ROOT / get_data_path(block)))
     features = get_features(block)
     X = df[features]
     y = df["nganh_hoc"]
@@ -349,10 +349,18 @@ def main():
             )
 
             compare_ml_vs_hybrid(ml_results, hybrid_results)
+            # Khi giới hạn mẫu hybrid, căn chỉnh độ dài với ML pred / nhãn (cùng thứ tự hàng test).
+            ml_pred_conf = np.asarray(ml_results["y_pred"])
+            y_conf = np.asarray(y_test.values)
+            hybrid_scores_conf = hybrid_results["hybrid_scores"]
+            if max_samples is not None and max_samples > 0:
+                n_h = len(hybrid_scores_conf)
+                ml_pred_conf = ml_pred_conf[:n_h]
+                y_conf = y_conf[:n_h]
             analyze_prediction_confidence(
-                ml_results["y_pred"],
-                hybrid_results["hybrid_scores"],
-                y_test.values,
+                ml_pred_conf,
+                hybrid_scores_conf,
+                y_conf,
             )
 
             ml_acc = ml_results["accuracy"]

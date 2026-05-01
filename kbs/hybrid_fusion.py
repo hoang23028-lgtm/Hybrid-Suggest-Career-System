@@ -2,9 +2,6 @@
 =========================================================
 
 
-Hai Loại Luật:
-  1. Luật Không AI (KBS):   32 luật chuyên gia (knowledge_rules.py)
-  2. Luật Từ ML   (ML):     Random Forest + Feature Extraction (train_model.py)
   
 Kết Hợp (Fusion):
   Hybrid_Score = 0.6 × ML_Score + 0.4 × KBS_Score
@@ -151,7 +148,7 @@ def calculate_ml_score(user_scores, major_index, block: str, model=None):
         class_pos = classes.index(major_index)
         raw_prob = probs[class_pos]
 
-        if raw_prob is None or not isinstance(raw_prob, (int, float)):
+        if raw_prob is None or not isinstance(raw_prob, (int, float, np.floating)):
             return {
                 'score': None,
                 'raw_prob': None,
@@ -200,7 +197,7 @@ def calculate_kbs_score(user_scores, major_index, block: str):
     Tính KBS_Score từ 32 luật chuyên gia
     
     Args:
-        user_scores: list [Toán, Lý, Hóa, Sinh, Văn, Anh, LS, DL, Tin, GDCD]
+        user_scores: list điểm theo đúng thứ tự `get_features(block)` (6 môn/khối)
         major_index: int (0-7)
     
     Returns:
@@ -211,6 +208,12 @@ def calculate_kbs_score(user_scores, major_index, block: str):
             'major': str
         }
     """
+    feature_names = get_features(block)
+    if len(user_scores) != len(feature_names):
+        raise ValueError(
+            f"user_scores length mismatch: got {len(user_scores)}, expected {len(feature_names)} for {block}"
+        )
+
     kbs = _get_kbs_engine(block)
     result = kbs.evaluate(user_scores, major_index)
     
@@ -323,7 +326,7 @@ def calculate_hybrid_score(user_scores, major_index, block: str, model=None):
     Bước 4: Kết hợp = w_ml × ML + w_kbs × KBS (trọng số có thể bị veto điều chỉnh)
     
     Args:
-        user_scores: list [Toán, Lý, Hóa, Sinh, Văn, Anh, LS, DL, Tin, GDCD]
+        user_scores: list điểm theo đúng thứ tự `get_features(block)` (6 môn/khối)
         major_index: int (0-7)
         model: Random Forest model (optional)
     

@@ -1,0 +1,62 @@
+\chapter{Huấn luyện mô hình học máy}
+
+\section{Lựa chọn thuật toán và siêu tham số}
+Dự án cố định thuật toán \textbf{Random Forest} vì tính ổn định trên dữ liệu bảng, khả năng xử lý không tuyến tính và độ tương thích cao với pipeline \texttt{scikit-learn}. Siêu tham số nằm trong từ điển \texttt{RF\_PARAMS} :
+\begin{itemize}[leftmargin=*]
+  \item \texttt{n\_estimators}=100: số cây.
+  \item \texttt{max\_depth}=15: giới hạn độ sâu.
+  \item \texttt{min\_samples\_split}=10, \texttt{min\_samples\_leaf}=5: điều chế độ chi tiết lá.
+  \item \texttt{random\_state}=42, \texttt{n\_jobs}=-1.
+\end{itemize}
+
+\section{Pipeline huấn luyện}
+\texttt{scripts/train\_model.py} thực hiện tuần tự: đọc CSV theo \texttt{get\_data\_path(block)}; tách ma trận $X$ theo \texttt{get\_features(block)} và vector $y$ là cột \texttt{nganh\_hoc}; chia stratified 80/20; huấn luyện; in \texttt{classification\_report} và ma trận nhầm lẫn trên log; chạy \texttt{cross\_val\_score} với \texttt{cv=5} trên tập huấn; lưu pickle tới \texttt{models/rf\_model\_khtn.pkl} và \texttt{models/rf\_model\_khxh.pkl}.
+
+\begin{algorithm}[!htbp]
+\caption{Huấn luyện Random Forest theo khối (mức logic)}
+\label{alg:trainrf}
+\begin{algorithmic}[1]
+\Require Bảng dữ liệu đã cân bằng; \texttt{block} $\in\{\texttt{khtn},\texttt{khxh}\}$
+\State Đọc $X,y$ theo \texttt{get\_features}, cột \texttt{nganh\_hoc}
+\State Chia $(X_{\mathrm{tr}},X_{\mathrm{te}},y_{\mathrm{tr}},y_{\mathrm{te}})$ stratified $80/20$
+\State Khởi tạo \texttt{RandomForestClassifier(**RF\_PARAMS)}
+\State \texttt{fit} trên $(X_{\mathrm{tr}},y_{\mathrm{tr}})$; đánh giá trên tập kiểm tra và CV-5
+\State Lưu mô hình pickle theo \texttt{get\_model\_path(block)}
+\end{algorithmic}
+\end{algorithm}
+\FloatBarrier
+
+\section{Hàm mất mát và chỉ số tách trong cây}
+Ở mỗi nút, cây quyết định tìm cách tách làm giảm chỉ số không thuần nhất (\textit{impurity}), thường là entropy hoặc Gini cho phân loại. RF lấy trung bình qua nhiều cây nên biên quyết định trở nên mượt hơn so với một cây đơn sâu---đây là cơ sở trực giác cho tính ổn định trên dữ liệu nhiễu nhỏ như điểm thi chính thức.
+
+\section{Quá khớp và các biện pháp đã áp dụng}
+Giới hạn \texttt{max\_depth}, \texttt{min\_samples\_leaf} và kiểm định chéo 5-fold giúp giảm nguy cơ quá khớp. Đồ án chưa vẽ đường cong học (\textit{learning curve}) theo cỡ huấn luyện; đây là hướng mở rộng khi cộng thêm năm dữ liệu.
+
+\section{Độ phức tạp thời gian huấn luyện (ước lượng)}
+Với $N$ mẫu, $d$ đặc trưng, $B$ cây và độ sâu tối đa $D$, mỗi cây có chi phí tách gần $O(N d \log N)$ trong trường hợp trung bình; tổng huấn luyện gần $O(B N d \log N)$. Thực tế \texttt{n\_jobs=-1} khai thác đa lõi CPU để giảm wall-clock time.
+
+\section{Đánh giá chéo và tái lập}
+Số fold \texttt{CV\_FOLDS=5} được khai báo trong \texttt{kbs/config.py}. Việc cố định \texttt{random\_state} trên cả chia tập và RF giúp tái lập kết quả khi dữ liệu đầu vào không đổi.
+
+\section{Độ quan trọng đặc trưng }
+Sau khi huấn, vector \texttt{feature\_importances\_} được trích từ file \texttt{.pkl} trong repository. Bảng \ref{tab:fi} liệt kê giá trị (làm tròn ba chữ số thập phân).
+
+\begin{table}[htbp]
+\centering
+\caption{Độ quan trọng đặc trưng theo mô hình đã lưu}
+\label{tab:fi}
+\begin{tabular}{lcccccc}
+\toprule
+Khối & toan & van & anh & lý / lịch sử & hóa / địa & sinh / gdcd \\
+\midrule
+KHTN & 0{,}154 & 0{,}039 & 0{,}169 & 0{,}249 & 0{,}155 & 0{,}235 \\
+KHXH & 0{,}184 & 0{,}144 & 0{,}273 & 0{,}140 & 0{,}175 & 0{,}084 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Nhận xét: với KHTN, Lý và Sinh chi phối; Văn đóng góp thấp nhất trong RF --- phù hợp heuristic gán IT/Y dựa nhiều vào tổ hợp tự nhiên. Với KHXH, Ngoại ngữ có trọng số cao nhất; GDCD thấp nhất nhưng vẫn có nghĩa thống kê.
+
+
+\section{Tổng kết chương}
+Hai mô hình độc lập theo khối được huấn luyện với cùng một skeleton mã; đầu ra xác suất được fusion sử dụng ở chương 6.

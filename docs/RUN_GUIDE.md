@@ -58,6 +58,7 @@ streamlit run app.py
 - **Output**:
   - `data/data_khtn.csv`
   - `data/data_khxh.csv`
+  - (Để train/eval ML) cần có cột nhãn `nganh_hoc` trong các file CSV này.
 
 ```powershell
 python scripts/create_data.py
@@ -131,4 +132,5 @@ python scripts/inspect_db.py
 - **Không có `data/data_khtn.csv` / `data/data_khxh.csv`**: chạy `python scripts/create_data.py`
 - **Không có `models/rf_model_khtn.pkl` / `models/rf_model_khxh.pkl`**: chạy `python scripts/train_model.py`
 - **Thiếu `data/diem_thi_thpt_2024.csv`**: đặt đúng tên file theo `kbs/config.py`
+ - **Lỗi `KeyError: 'nganh_hoc'` khi train/eval**: đảm bảo `data/data_*.csv` có cột nhãn `nganh_hoc` (theo `kbs/config.py:NGANH_HOC_MAP`).
 

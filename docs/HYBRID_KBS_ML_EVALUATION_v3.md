@@ -37,25 +37,25 @@ Phân rõ: cái nào học từ dữ liệu, cái nào dùng tri thức chuyên 
 ## Bước 2: Thu Thập & Tiền Xử Lý Dữ Liệu
 
 ### Mục Tiêu
-Dữ liệu sạch, chuẩn hóa, cân bằng, gắn nhãn đúng.
+Dữ liệu sạch, chuẩn hóa, và có nhãn phù hợp (nếu đánh giá theo nhãn).
 
 ### Hiện Trạng v3.0
 
 | Tiêu Chí | Chi Tiết | Đánh Giá |
 |----------|----------|----------|
 | **Nguồn** | `data/diem_thi_thpt_2024.csv` (THPT 2024) | ✅ Đáng tin cây |
-| **Kích thước** | Phụ thuộc CSV gốc; sau `scripts/create_data.py` các lớp được **cân bằng** (undersampling) | ✅ Ổn định cho train |
+| **Kích thước** | Phụ thuộc CSV gốc và pipeline tạo dữ liệu | ✅ Ổn định cho train |
 | **Features** | 6 môn (bắt buộc 3 + tự chọn 3) | ✅ Hợp lý, phù hợp quy định |
 | **Phạm vi** | [0, 10] (chuẩn THPT) | ✅ Chuẩn |
 | **Missing Values** | Rất ít (< 1%) | ✅ Sạch |
 | **Outliers** | Rất ít (hệ thống chính thức) | ✅ Sạch |
-| **Cân Bằng Lớp** | `scripts/create_data.py` cân bằng theo lớp nhỏ nhất trong khối | ✅ Cân bằng cho RF |
-| **Gắn Nhãn** | Heuristic trong `scripts/create_data.py` (assign_major_khtn / khxh) | ⚠ Cần validate ngoài thực tế |
+| **Cân Bằng Lớp** | (Tuỳ chọn) cân bằng theo chiến lược dữ liệu của nhóm | ✅ Giảm bias tần suất |
+| **Gắn Nhãn** | Nhãn `nganh_hoc` theo `NGANH_HOC_MAP` (nguồn nhãn có thể là heuristic hoặc nguồn khác) | ⚠ Cần validate ngoài thực tế |
 
 ### Đánh Giá: ⭐ **GOOD** (8/10)
 
 - ✅ **Dữ liệu thực tế** từ THPT 2024 (không synthetic)
-- ✅ **Cân bằng lớp** trước khi train (giảm bias tần suất heuristic)
+- ✅ (Tuỳ chọn) **cân bằng lớp** trước khi train (giảm bias tần suất nhãn)
 - ✅ **Sạch & chuẩn** (ít missing/outliers)
 - ⚠ **Heuristic nhãn** không thay thế khảo sát chuyên gia
 - ⚠ **Một năm dữ liệu** — có thể mở rộng nhiều năm nếu có file tương tự
@@ -67,7 +67,7 @@ Dữ liệu sạch, chuẩn hóa, cân bằng, gắn nhãn đúng.
 
 ### Cần Cải Thiện
 - Gom thêm năm (chuẩn bị pipeline ingest + cột thống nhất).
-- Đánh giá lại heuristic gán `nganh_hoc` so với lựa chọn thực tế của học sinh (nếu có khảo sát).
+- Nếu nhãn là heuristic: đánh giá lại `nganh_hoc` so với lựa chọn thực tế của học sinh (nếu có khảo sát).
 
 ---
 
@@ -263,7 +263,7 @@ Metrics: accuracy, precision, recall, F1, user satisfaction.
 | Metric | Nguồn | Ghi chú |
 |--------|--------|---------|
 | **Accuracy / F1 / ma trận nhầm lẫn** | `scripts/train_model.py`, `scripts/evaluate_model.py` | Chạy trên từng khối sau khi có `data/data_*.csv` và `models/rf_model_*.pkl` |
-| **Hybrid vs nhãn** | `scripts/evaluate_model.py` (tùy `EVAL_MAX_SAMPLES`) | Đo mức hybrid “đồng ý” với nhãn heuristic |
+| **Hybrid vs nhãn** | `scripts/evaluate_model.py` (tùy `EVAL_MAX_SAMPLES`) | Đo mức hybrid “đồng ý” với nhãn (nếu nhãn là heuristic thì đây là mức “khớp heuristic”) |
 | **User Satisfaction** | Chưa có khảo sát | ❓ |
 
 ### Đánh Giá: ⭐ **GOOD** (7.5/10) — định tính

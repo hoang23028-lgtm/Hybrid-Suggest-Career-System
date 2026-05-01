@@ -1,10 +1,4 @@
-"""
-Retrain pipeline (Step 7): data -> train -> evaluate -> persist metrics.
 
-Usage examples:
-  python retrain_pipeline.py --blocks khtn khxh --eval-max-samples 2000
-  python retrain_pipeline.py --skip-data --extract-rules
-"""
 
 from __future__ import annotations
 
@@ -26,6 +20,7 @@ from kbs.metrics_db import (
     log_alert,
     new_run_id,
 )
+from kbs.config import get_model_path
 
 from scripts import create_data, train_model
 from scripts.evaluate_model import evaluate_block
@@ -138,7 +133,8 @@ def run_pipeline(
                     "label_names": eval_summaries[b].get("label_names"),
                 }
 
-                model_path = repo_dir / ("rf_model_khtn.pkl" if b == "khtn" else "rf_model_khxh.pkl")
+                # model path is repo-relative in config (e.g. models/rf_model_khtn.pkl)
+                model_path = repo_dir / get_model_path(b)
                 if model_path.exists():
                     common_details["model"] = {
                         "path": str(model_path),
