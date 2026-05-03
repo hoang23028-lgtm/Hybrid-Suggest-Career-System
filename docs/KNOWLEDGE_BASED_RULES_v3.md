@@ -18,6 +18,36 @@ v3.0 :
 - `_build_condition()` biên dịch JSON → callable
 ```
 
+### Thống kê luật (`rules_config.json`, bản 3.0)
+
+Số liệu dưới đây khớp với nội dung JSON hiện tại: mỗi **mục ngành** có 4 **luật nền** (Very_Fit / Fit / Medium / Not_Fit) và tối đa thêm các **luật chuỗi** trong `chaining_rules`.
+
+| Phạm vi | Số ngành (key) | Luật nền | Luật chuỗi | Tổng định nghĩa |
+|--------|-----------------|----------|------------|-----------------|
+| **KHTN** (`khtn_rules`) | 5 (`0_IT` … `4_NongLamNgu`) | 5 × 4 = **20** | 5 × 2 = **10** | **30** |
+| **KHXH** (`khxh_rules`) | 4 (`1_KinhTe`, `5_SuPham`, `6_Luat`, `7_DuLich`) | 4 × 4 = **16** | 4 × 2 = **8** | **24** |
+| **Toàn tệp** | 9 mục ngành (Kinh tế khai báo riêng theo khối) | **36** | **18** | **54** |
+
+**Luật nền theo toán tử:** mỗi ngành có 3 luật `AND` + 1 luật `OR_LESS_THAN` (Not_Fit) → **27** luật `AND` + **9** luật `OR_LESS_THAN` = **36**.
+
+**Luật chuỗi:** mỗi ngành có **2** mục trong `chaining_rules` (bonus điểm khi đã khớp luật nền trong `requires` và thỏa thêm `threshold`). Tổng **18** luật chuỗi (KHTN 10 + KHXH 8).
+
+**Chi tiết theo key ngành**
+
+| Key | `major_name` | Luật nền | Luật chuỗi |
+|-----|----------------|----------|------------|
+| `0_IT` | IT | 4 | 2 |
+| `1_KinhTe` (KHTN) | Kinh tế | 4 | 2 |
+| `2_YKhoa` | Y khoa | 4 | 2 |
+| `3_KyThuat` | Kỹ thuật | 4 | 2 |
+| `4_NongLamNgu` | Nông-Lâm-Ngư | 4 | 2 |
+| `1_KinhTe` (KHXH) | Kinh tế | 4 | 2 |
+| `5_SuPham` | Sư phạm | 4 | 2 |
+| `6_Luat` | Luật pháp | 4 | 2 |
+| `7_DuLich` | Du lịch | 4 | 2 |
+
+**Ghi chú khi chạy engine:** với một khối (`khtn` hoặc `khxh`), engine chỉ duyệt luật nền của các ngành thuộc khối đó (tối đa **20** hoặc **16** luật nền khi gọi `evaluate_all_majors`), cộng thêm luật chuỗi tương ứng từng ngành sau khi đã chọn luật nền thắng.
+
 ---
 
 ## II. Cấu Trúc Luật JSON (rules_config.json)
@@ -68,7 +98,7 @@ v3.0 :
 ```
 User Input (6 môn) → [điểm môn]
     ↓
-Duyệt qua ~20 luật trong rules_config.json
+Duyệt luật nền của các ngành trong khối (tối đa 20 KHTN / 16 KHXH; xem mục Thống kê luật)
     ↓
 Kiểm tra điều kiện (AND / OR_LESS_THAN)
     ↓

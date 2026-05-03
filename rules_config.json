@@ -1,6 +1,6 @@
 {
     "version": "3.0",
-    "description": "Cấu hình luật chuyên gia cho Hybrid KBS - Kiến trúc 2 khối (KHTN/KHXH), không Tin học",
+    "description": "Cấu hình luật chuyên gia cho Hybrid KBS - Kiến trúc 2 khối (KHTN/KHXH)",
 
     "khtn_rules": {
         "0_IT": {
