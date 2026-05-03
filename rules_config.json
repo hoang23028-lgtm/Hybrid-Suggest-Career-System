@@ -348,32 +348,38 @@
                 {"name": "IT_TinSinhHoc", "requires": ["IT_Very_Fit", "IT_Fit"], "threshold": {"sinh": 7}, "bonus": 2, "reason": "Tiềm năng Tin Sinh học (Sinh tốt)"}
             ],
             "1_KinhTe": [
-                {"name": "KinhTe_TaiChinh", "requires": ["KinhTe_Very_Fit", "KinhTe_Fit"], "threshold": {"toan": 8}, "bonus": 3, "reason": "Phù hợp Tài chính - Ngân hàng (Toán mạnh)"}
+                {"name": "KinhTe_TaiChinh", "requires": ["KinhTe_Very_Fit", "KinhTe_Fit"], "threshold": {"toan": 8}, "bonus": 3, "reason": "Phù hợp Tài chính - Ngân hàng (Toán mạnh)"},
+                {"name": "KinhTe_Marketing", "requires": ["KinhTe_Very_Fit", "KinhTe_Fit", "KinhTe_Medium"], "threshold": {"van": 7.5}, "bonus": 2, "reason": "Tiềm năng Marketing / Truyền thông (Văn tốt)"}
             ],
             "2_YKhoa": [
                 {"name": "YKhoa_QuocTe", "requires": ["YKhoa_Very_Fit", "YKhoa_Fit"], "threshold": {"anh": 7.5}, "bonus": 3, "reason": "Phù hợp Y khoa Quốc tế (Anh xuất sắc)"},
                 {"name": "YKhoa_NghienCuu", "requires": ["YKhoa_Very_Fit"], "threshold": {"toan": 7.5}, "bonus": 2, "reason": "Tiềm năng Nghiên cứu Y học (Toán tốt)"}
             ],
             "3_KyThuat": [
-                {"name": "KyThuat_CaoCap", "requires": ["KyThuat_Very_Fit", "KyThuat_Fit"], "threshold": {"hoa": 7.5}, "bonus": 3, "reason": "Phù hợp Kỹ thuật Hóa - Vật liệu"}
+                {"name": "KyThuat_CaoCap", "requires": ["KyThuat_Very_Fit", "KyThuat_Fit"], "threshold": {"hoa": 7.5}, "bonus": 3, "reason": "Phù hợp Kỹ thuật Hóa - Vật liệu"},
+                {"name": "KyThuat_DienCo", "requires": ["KyThuat_Very_Fit", "KyThuat_Fit"], "threshold": {"ly": 8}, "bonus": 2, "reason": "Tiềm năng Điện - Cơ khí (Lý rất mạnh)"}
             ],
             "4_NongLamNgu": [
-                {"name": "NongLam_CongNghe", "requires": ["NongLamNgu_Very_Fit", "NongLamNgu_Fit"], "threshold": {"toan": 7}, "bonus": 2, "reason": "Tiềm năng Nông nghiệp công nghệ cao"}
+                {"name": "NongLam_CongNghe", "requires": ["NongLamNgu_Very_Fit", "NongLamNgu_Fit"], "threshold": {"toan": 7}, "bonus": 2, "reason": "Tiềm năng Nông nghiệp công nghệ cao"},
+                {"name": "NongLam_ThuySan", "requires": ["NongLamNgu_Very_Fit", "NongLamNgu_Fit"], "threshold": {"sinh": 8}, "bonus": 2, "reason": "Tiềm năng Nuôi trồng Thủy sản (Sinh xuất sắc)"}
             ]
         },
         "khxh": {
             "1_KinhTe": [
-                {"name": "KinhTe_QuocTe", "requires": ["KinhTe_Very_Fit", "KinhTe_Fit"], "threshold": {"anh": 8}, "bonus": 3, "reason": "Phù hợp Kinh tế Quốc tế (Anh xuất sắc)"}
+                {"name": "KinhTe_QuocTe", "requires": ["KinhTe_Very_Fit", "KinhTe_Fit"], "threshold": {"anh": 8}, "bonus": 3, "reason": "Phù hợp Kinh tế Quốc tế (Anh xuất sắc)"},
+                {"name": "KinhTe_KeToan", "requires": ["KinhTe_Very_Fit", "KinhTe_Fit"], "threshold": {"toan": 8}, "bonus": 2, "reason": "Phù hợp Kế toán - Kiểm toán (Toán mạnh)"}
             ],
             "5_SuPham": [
-                {"name": "SuPham_QuocTe", "requires": ["SuPham_Very_Fit"], "threshold": {"anh": 8}, "bonus": 3, "reason": "Phù hợp Giáo dục Quốc tế (Anh xuất sắc)"}
+                {"name": "SuPham_QuocTe", "requires": ["SuPham_Very_Fit"], "threshold": {"anh": 8}, "bonus": 3, "reason": "Phù hợp Giáo dục Quốc tế (Anh xuất sắc)"},
+                {"name": "SuPham_XaHoi", "requires": ["SuPham_Very_Fit", "SuPham_Fit"], "threshold": {"lich_su": 8}, "bonus": 2, "reason": "Tiềm năng Sư phạm Lịch sử / Khoa học xã hội"}
             ],
             "6_Luat": [
                 {"name": "Luat_QuocTe", "requires": ["Luat_Very_Fit", "Luat_Fit"], "threshold": {"anh": 7.5}, "bonus": 3, "reason": "Phù hợp Luật Quốc tế (Anh tốt)"},
                 {"name": "Luat_HanhChinh", "requires": ["Luat_Very_Fit", "Luat_Fit"], "threshold": {"gdcd": 8.5}, "bonus": 2, "reason": "Tiềm năng Luật Hành chính (GDCD xuất sắc)"}
             ],
             "7_DuLich": [
-                {"name": "DuLich_QuocTe", "requires": ["DuLich_Very_Fit", "DuLich_Fit"], "threshold": {"anh": 8, "dia_ly": 8}, "bonus": 3, "reason": "Phù hợp Du lịch Quốc tế"}
+                {"name": "DuLich_QuocTe", "requires": ["DuLich_Very_Fit", "DuLich_Fit"], "threshold": {"anh": 8, "dia_ly": 8}, "bonus": 3, "reason": "Phù hợp Du lịch Quốc tế"},
+                {"name": "DuLich_SuKien", "requires": ["DuLich_Very_Fit", "DuLich_Fit", "DuLich_Medium"], "threshold": {"van": 8}, "bonus": 2, "reason": "Tiềm năng Sự kiện / Truyền thông du lịch (Văn xuất sắc)"}
             ]
         }
     },
@@ -386,7 +392,7 @@
     "default_score": 10,
     "max_score": 100,
     "weights": {
-        "ml_weight": 0.6,
-        "kbs_weight": 0.4
+        "ml_weight": 0.5,
+        "kbs_weight": 0.5
     }
 }

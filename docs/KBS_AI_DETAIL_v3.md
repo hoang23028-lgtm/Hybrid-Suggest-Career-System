@@ -9,7 +9,7 @@
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                   STREAMLIT APP (app.py)                │
-│         [Chọn Khối] → [Nhập 6 Điểm] → [Xem Kết Quả]   │
+│  [Khối] → [Slider 6 môn] → [Phân tích] → 2 tab: Kết quả | Chi tiết  │
 └─────────┬─────────────────────────────────────────────┘
           │
      [Input: 6 điểm]
@@ -32,8 +32,8 @@
 │           │                      │                       │
 │           └──────────┬───────────┘                       │
 │                      │                                   │
-│            Fusion: 0.6×ML + 0.4×KBS                     │
-│            = 0.6×65 + 0.4×80 = 71%                     │
+│            Fusion: 0.5×ML + 0.5×KBS                     │
+│            = 0.5×65 + 0.5×80 = 72.5%                    │
 │                      │                                   │
 └──────────────────────┼──────────────────────────────────┘
                        │
@@ -135,26 +135,26 @@ for major_index in get_majors("khtn"):
 
 ```python
 # kbs/hybrid_fusion.py → calculate_hybrid_score() (mỗi ngành)
-# Mặc định: hybrid = 0.6 * ml + 0.4 * kbs
+# Mặc định: hybrid = 0.5 * ml + 0.5 * kbs
 # Nếu VETO: trọng số chuyển về ~0.15 ML + 0.85 KBS (xem check_kbs_veto)
-hybrid_scores = 0.6 * ml_scores + 0.4 * kbs_scores
+hybrid_scores = 0.5 * ml_scores + 0.5 * kbs_scores
 
 # Ví dụ:
-# IT: 0.6 * 15 + 0.4 * 95 = 9 + 38 = 47%
-# KT: 0.6 * 42 + 0.4 * 75 = 25.2 + 30 = 55.2%
-# Y:  0.6 * 35 + 0.4 * 85 = 21 + 34 = 55%
-# KyThuat: 0.6 * 25 + 0.4 * 80 = 15 + 32 = 47%
-# NLN: 0.6 * 10 + 0.4 * 60 = 6 + 24 = 30%
+# IT: 0.5 * 15 + 0.5 * 95 = 7.5 + 47.5 = 55%
+# KT: 0.5 * 42 + 0.5 * 75 = 21 + 37.5 = 58.5%
+# Y:  0.5 * 35 + 0.5 * 85 = 17.5 + 42.5 = 60%
+# KyThuat: 0.5 * 25 + 0.5 * 80 = 12.5 + 40 = 52.5%
+# NLN: 0.5 * 10 + 0.5 * 60 = 5 + 30 = 35%
 
 # Sort & Rank
 ranking = sorted(zip(major_names, hybrid_scores), 
                  key=lambda x: x[1], reverse=True)
 # Output:
-# 1. Kinh tế: 55.2%
-# 2. Y khoa: 55%
-# 3. IT: 47%
-# 4. Kỹ thuật: 47%
-# 5. Nông-Lâm: 30%
+# 1. Y khoa: 60%
+# 2. Kinh tế: 58.5%
+# 3. IT: 55%
+# 4. Kỹ thuật: 52.5%
+# 5. Nông-Lâm: 35%
 ```
 
 ### 2.5 Bước 5: Explanation Generation
@@ -162,18 +162,18 @@ ranking = sorted(zip(major_names, hybrid_scores),
 **Input:** score_array, ml_scores, kbs_scores, hybrid_scores
 
 ```python
-# hybrid_fusion.py → _create_explanation()
+# kbs/hybrid_fusion.py → _create_explanation()
 
 explanation = {
-    'top_major': 'Kinh tế',
-    'top_score': 55.2,
-    'ml_score': 42,
-    'kbs_score': 75,
+    'top_major': 'Y khoa',
+    'top_score': 60.0,
+    'ml_score': 35,
+    'kbs_score': 85,
     'reasoning': {
-        'ml': '42% từ ML: điểm Anh (7.0) tương đối, Toán (8.5) cao, Văn (7.0) cân bằng',
-        'kbs': '75% từ KBS: Anh≥7, Toán≥6.5, Văn≥6.5 → Fit rule',
-        'hybrid': 'Kết hợp: 60% ML (42) + 40% KBS (75) = 55.2%',
-        'recommendation': 'Kinh tế là lựa chọn tốt. Cân nhắc Y khoa (55%) vì Sinh cao'
+        'ml': '35% từ ML (ví minh họa)',
+        'kbs': '85% từ KBS: Sinh/Hóa/Lý tốt → Fit rule',
+        'hybrid': 'Kết hợp: 50% ML (35) + 50% KBS (85) = 60%',
+        'recommendation': 'Y khoa dẫn đầu sau fusion 50/50; Kinh tế ~58.5% gần theo sau'
     }
 }
 ```
@@ -187,7 +187,7 @@ explanation = {
 KBS có quyền **phủ quyết** (veto) kết quả ML khi phát hiện bất hợp lý rõ ràng.
 
 ```python
-# hybrid_fusion.py → VETO_CONFIG
+# kbs/config.py (dùng trong hybrid_fusion; tune: `python scripts/tune_veto.py`)
 
 VETO_KBS_NOT_FIT_THRESHOLD = 20      # KBS ≤ 20 → "Không phù hợp"
 VETO_ML_HIGH_THRESHOLD = 60          # ML > 60 trong khi KBS ≤ 20 → bất hợp lý
@@ -206,7 +206,7 @@ Khối: KHTN
 ML có thể vẫn cho xác suất cao ở một số ngành; KBS có thể trả Not_Fit (điểm thấp).
 
 → Nếu KBS ≤ 20, ML > 60 và có môn trọng tâm < 4.0 → VETO kích hoạt
-→ Hybrid ≈ 0.15 × ML + 0.85 × KBS (thay vì 60/40)
+→ Hybrid ≈ 0.15 × ML + 0.85 × KBS (thay vì 50/50 khi không veto)
 ```
 
 ---
@@ -216,7 +216,7 @@ ML có thể vẫn cho xác suất cao ở một số ngành; KBS có thể tr�
 ### 4.1 Random Forest Config
 
 ```python
-# config.py
+# kbs/config.py (root `config.py` là shim re-export)
 RF_PARAMS = {
     'n_estimators': 100,        # 100 cây
     'max_depth': 15,            # Độ sâu tối đa
@@ -345,24 +345,23 @@ Chi tiết veto / trọng số nằm trong từng lần gọi `calculate_hybrid_
 
 ### 6.2 Streamlit Display
 
+Sau khi nhấn **Phân tích**, ứng dụng dùng `get_hybrid_ranking(...)` rồi lấy `all_rankings[0]` làm ngành đề xuất; giao diện gồm **hai tab** (không còn tab so sánh nhiều ngành trên cùng trang).
+
 ```python
-# app.py
-st.metric("Ngành Gợi Ý", "Kinh tế", "55.2%")
+# app.py (ý chính)
+tab1, tab2 = st.tabs(["Kết quả chính", "Phân tích chi tiết"])
 
-# Expander: Chi tiết điểm
-with st.expander("Xem chi tiết"):
-    col1, col2 = st.columns(2)
-    with col1:
-        st.write("**ML Score:** 42%")
-        st.write("Dựa trên: Random Forest 100 cây")
-    with col2:
-        st.write("**KBS Score:** 75%")
-        st.write("Rule: KinhTe_Fit")
+with tab1:
+    st.metric("Ngành được chọn", best_major["major"])
+    st.metric("Hybrid Score", f"{best_major['hybrid_score']:.1f}%")
+    st.info(best_major["explanation"])
+    for step in best_major.get("reasoning_chain") or []:
+        st.markdown(f"- {step}")
 
-# Bar chart: Ranking
-fig, ax = plt.subplots()
-ax.barh(major_names, hybrid_scores)
-st.pyplot(fig)
+with tab2:
+    fig_radar = px.line_polar(df_radar, r="Điểm", theta="Môn", line_close=True)
+    st.plotly_chart(fig_radar, use_container_width=True)
+    st.dataframe(stats_df)
 ```
 
 ---
@@ -430,19 +429,16 @@ def calculate_satisfaction(actual_major, predicted_major):
 
 | Tệp | Chức Năng |
 |-----|----------|
-| `app.py` | UI: Input + Output |
-| `hybrid_fusion.py` | Engine: ML + KBS + Fusion + VETO |
-| `knowledge_rules.py` | KBS: JSON → Predict |
+| `app.py` | UI Streamlit: khối + 6 điểm + Phân tích; 2 tab (kết quả / radar + bảng môn) |
+| `kbs/hybrid_fusion.py` | ML + KBS + Fusion + VETO + ranking |
+| `kbs/knowledge_rules.py` | KBS: JSON → evaluate / chaining / `reasoning_chain` |
 | `scripts/train_model.py` | ML: Training pipeline |
-| `config.py` | Settings, paths, features |
-| `rules_config.json` | KBS rules (20+ luật) |
+| `scripts/tune_veto.py` | (Tuỳ chọn) quét tham số VETO trên tập test |
+| `kbs/config.py` | Settings, paths, features, **VETO_***, RF params |
+| `rules_config.json` | KBS rules + `chaining_rules` |
 | `models/rf_model_khtn.pkl` | ML model (KHTN) |
 | `models/rf_model_khxh.pkl` | ML model (KHXH) |
 | `monitoring.py` | Logging & Performance |
-| `experiments.py` | Testing & Tuning |
+| `scripts/legacy/experiments.py` | Thử nghiệm tỷ lệ ML/KBS (legacy) |
 
 ---
-
-**Cập nhật:** 30/04/2026  
-**Phiên bản:** 3.0  
-**Tác giả:** Hybrid KBS-ML Team

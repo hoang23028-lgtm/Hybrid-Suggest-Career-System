@@ -4,7 +4,7 @@
 
 ---
 
-## I. Tổng Quan Kiến Trúc KBS v3.0
+## I. Tổng Quan Kiến Trúc KBS 
 
 
 
@@ -13,7 +13,7 @@
 
 v3.0 :
 - Luật theo ngành trong `rules_config.json` (`khtn_rules`, `khxh_rules`)
-- 2 khối (KHTN: 5 ngành, KHXH: 4 ngành), 6 môn/khối (không dùng Tin học)
+- 2 khối (KHTN: 5 ngành, KHXH: 4 ngành), 6 môn/khối
 - **Forward chaining:** `chaining_rules` trong JSON → `forward_chain()` sau khi chọn luật nền
 - `_build_condition()` biên dịch JSON → callable
 ```
@@ -322,7 +322,7 @@ for idx in get_majors("khtn"):
 
 # Hoặc một lần cho cả khối:
 all_results = engine.evaluate_all_majors(student_scores)
-# dict: tên ngành → dict kết quả (score, rule_name, reason, chain_applied, ...)
+# dict: tên ngành → dict kết quả (score, rule_name, reason, chain_applied, reasoning_chain, ...)
 ```
 
 ### 5.2 Xếp hạng chỉ KBS
@@ -351,11 +351,22 @@ ranking = engine.get_ranking(student_scores)
 - **Không học từ dữ liệu:** KBS hoàn toàn dựa trên cảm tính
 - **Forward chaining** đã có (bonus theo điều kiện chuỗi); có thể mở rộng thêm rule chain
 
+### 6.1 Chuỗi suy luận theo từng ngành (`reasoning_chain`)
+
+Mỗi lần gọi `evaluate(...)` hoặc `calculate_kbs_score` / hybrid, kết quả KBS có thêm **`reasoning_chain`**: `list[str]` — các bước tiếng Việt cố định:
+
+1. **Bước 1:** Ngành + điểm các môn trọng tâm + điểm liên quan TB (tie-break).
+2. **Bước 2:** Luật cơ sở được chọn sau giải quyết xung đột + điểm nền.
+3. **Bước 3+:** Mỗi luật chuỗi (`chaining_rules`) kích hoạt được (bonus), hoặc thông báo không có chuỗi thỏa.
+4. **Bước cuối:** Tổng kết điểm nền + bonus (trần `max_score`).
+
+`get_ranking` và `get_hybrid_ranking` trả về `reasoning_chain` **cho mỗi ngành** trong kết quả xếp hạng. Trên UI Streamlit hiện tại, chuỗi được hiển thị ở tab **Kết quả chính** cho **ngành đề xuất** (top-1), mục **Chuỗi suy luận KBS (theo ngành đề xuất)**.
+
 ---
 
 ## VII. Cải Tiến Có Thể
 
-1. **Mở rộng chaining_rules:** Thêm chuỗi suy luận theo từng ngành
+1. ~~**Mở rộng chaining_rules:** Thêm chuỗi suy luận theo từng ngành~~ — Đã bổ sung thêm luật chuỗi trong `rules_config.json` và trường `reasoning_chain` trong engine
 2. **Soft Thresholds:** Dùng fuzzy logic thay vì cứng (Toan ≥ 8 → degree 0.8)
 3. **Validation Workshop:** Họp với 10-15 giáo viên chuyên gia
 4. **Dynamic Thresholds:** Thresholds có thể thay đổi theo năm
@@ -367,13 +378,11 @@ ranking = engine.get_ranking(student_scores)
 
 | Tệp | Mục đích |
 |-----|---------|
-| `rules_config.json` | Cấu hình 20+ luật (JSON) |
-| `knowledge_rules.py` | Engine: load JSON → evaluate / forward_chain |
-| `hybrid_fusion.py` | Sử dụng KBS score + ML score |
-| `config.py` | Thông tin ngành, features |
+| `rules_config.json` | Luật KHTN/KHXH + `chaining_rules` (JSON) |
+| `kbs/knowledge_rules.py` | Engine: load JSON → evaluate / forward_chain / `reasoning_chain` |
+| `kbs/hybrid_fusion.py` | ML + KBS + VETO + ranking |
+| `kbs/config.py` | Ngành, features, RF params, **VETO_***, đường dẫn dữ liệu/model |
+| `scripts/tune_veto.py` | (Tuỳ chọn) quét lưới tham số VETO trên tập test |
 
 ---
 
-**Cập nhật lần cuối:** 30/04/2026  
-**Phiên bản:** 3.0  
-**Format:** JSON-based, dynamic thresholds

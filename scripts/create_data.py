@@ -6,7 +6,7 @@ Quy trình:
   2. Đổi tên cột theo chuẩn nội bộ
   3. Lọc thí sinh KHTN (có Lý, Hóa, Sinh) và KHXH (có Sử, Địa, GDCD)
   4. Loại bỏ hàng thiếu dữ liệu ở môn bắt buộc (Toán, Văn, Anh)
-  5. Lưu data_khtn.csv và data_khxh.csv (không gắn nhãn)
+  5. Lưu data_khtn.csv và data_khxh.csv
 """
 
 import logging

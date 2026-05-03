@@ -92,45 +92,6 @@ Tương tự KHTN.
 
 ---
 
-## 5. Quy Tắc Gán Nhãn (từ rules_config.json)
-
-### 5.1 KBS Rules - KHTN
-
-Mỗi ngành có 4 mức: Very_Fit (95), Fit (80), Medium (65), Not_Fit (20)
-
-**IT:**
-- Very_Fit: Toan ≥ 8 AND Ly ≥ 7.5 AND Anh ≥ 6
-- Fit: Toan ≥ 7 AND Ly ≥ 6.5 AND Hoa ≥ 5 AND Anh ≥ 5
-- Medium: Toan ≥ 7 AND Ly ≥ 6
-- Not_Fit: Toan < 6 OR Ly < 5.5
-
-**Y khoa:**
-- Very_Fit: Sinh ≥ 8.5 AND Hoa ≥ 8 AND Ly ≥ 7
-- Fit: Sinh ≥ 8 AND Hoa ≥ 7.5 AND Ly ≥ 6 AND Van ≥ 6
-- Medium: Sinh ≥ 7.5 AND Hoa ≥ 7
-- Not_Fit: Sinh < 6.5 OR Hoa < 6
-
-**Kinh tế:**
-- Very_Fit: Anh ≥ 8 AND Toan ≥ 7.5 AND Van ≥ 7
-- Fit: Anh ≥ 7 AND Toan ≥ 6.5 AND Van ≥ 6.5
-- Medium: Anh ≥ 6.5 AND Toan ≥ 6
-- Not_Fit: Anh < 6 OR Toan < 5.5
-
-### 5.2 KBS Rules - KHXH
-
-**Sư phạm:**
-- Very_Fit: Van ≥ 8 AND Anh ≥ 7.5 AND Toan ≥ 7
-- Fit: Van ≥ 7 AND Anh ≥ 7 AND Toan ≥ 6
-- Medium: Van ≥ 6.5 AND Anh ≥ 6
-- Not_Fit: Van < 6 OR Anh < 5.5
-
-**Luật pháp:**
-- Very_Fit: Van ≥ 8 AND Lich Su ≥ 7.5 AND Anh ≥ 7
-- Fit: Van ≥ 7 AND Lich Su ≥ 7 AND Anh ≥ 6.5
-- Medium: Van ≥ 6.5 AND Lich Su ≥ 6
-- Not_Fit: Van < 6 OR Lich Su < 5.5
-
----
 
 ## 6. Xử Lý & Tiền Xử Lý Dữ Liệu
 
@@ -150,7 +111,7 @@ Raw Data (data/diem_thi_thpt_2024.csv)
 [4] Lưu → data/data_khtn.csv, data/data_khxh.csv
 ```
 
-**Lưu ý về nhãn:** các script train/eval (`scripts/train_model.py`, `scripts/evaluate_model.py`) yêu cầu cột `nganh_hoc` (số nguyên trùng với chỉ số trong `kbs/config.py:NGANH_HOC_MAP`). Nếu bạn tự tạo CSV, hãy đảm bảo cột này tồn tại.
+
 
 ### 6.2 Missing Values
 
@@ -300,22 +261,9 @@ ranking = get_hybrid_ranking(scores_list, block=block, model=model)
 | `data/diem_thi_thpt_2024.csv` | Raw data gốc (~65MB) |
 | `data/data_khtn.csv` | Dữ liệu KHTN xử lý |
 | `data/data_khxh.csv` | Dữ liệu KHXH xử lý |
-| `config.py` | Cấu hình: paths, features, labels |
+| `kbs/config.py` | Cấu hình: paths, features, labels, VETO |
 | `scripts/train_model.py` | Training pipeline |
-| `hybrid_fusion.py` | Sử dụng dữ liệu cho prediction |
+| `kbs/hybrid_fusion.py` | Đọc vector điểm 6 môn cho ML + KBS + hybrid |
 | `rules_config.json` | KBS rules thresholds |
 
 ---
-
-## 13. Liên Hệ & Báo Cáo
-
-- **Data Quality Issues:** Báo cáo trong GitHub Issues
-- **Missing Values:** Check log của `scripts/train_model.py`
-- **Class Imbalance:** Xem thống kê trong `scripts/evaluate_model.py`
-- **Feature Correlation:** Xem heatmap trong `experiments.py`
-
----
-
-**Cập nhật lần cuối:** 30/04/2026  
-**Phiên bản:** 3.0  
-**Chủ trì:** Hybrid KBS-ML Team

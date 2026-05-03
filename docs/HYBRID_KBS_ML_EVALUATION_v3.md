@@ -13,31 +13,26 @@ Phân rõ: cái nào học từ dữ liệu, cái nào dùng tri thức chuyên 
 |-----------|---------|--------|
 | **ML (Random Forest)** | Dự đoán xác suất phù hợp từ dữ liệu | `models/rf_model_khtn.pkl` / `models/rf_model_khxh.pkl` → `predict_proba()` |
 | **KBS (JSON Rules)** | Đánh giá dựa luật, cung cấp giải thích | `rules_config.json` → conflict resolution |
-| **Hybrid Fusion** | Kết hợp 60% ML + 40% KBS | `kbs/hybrid_fusion.py` → (0.6×ML + 0.4×KBS) |
-| **VETO Mechanism** | KBS phủ quyết ML khi phát hiện bất hợp lý | KBS thấp + ML cao + môn trọng tâm theo khối < 4.0 (`hybrid_fusion.check_kbs_veto`) |
+| **Hybrid Fusion** | Kết hợp 50% ML + 50% KBS | `kbs/hybrid_fusion.py` → (0.5×ML + 0.5×KBS) |
+| **VETO Mechanism** | KBS phủ quyết ML khi phát hiện bất hợp lý | Ngưỡng trong `kbs/config.py`; logic `kbs/hybrid_fusion.check_kbs_veto`; tinh chỉnh `scripts/tune_veto.py` |
 
-### Đánh Giá: ⭐ **EXCELLENT**
-
-- ✅ **Phân chia rõ ràng:** ML dự đoán (data-driven), KBS giải thích (expert-driven)
-- ✅ **VETO mechanism:** Bảo vệ output không hợp lý (VD: IT nhưng Lý = 2)
-- ✅ **Fallback:** Nếu không load được model → hybrid chỉ còn KBS (`ml_score` None)
-- ✅ **Weights:** 60/40 trong `hybrid_fusion`; thử nghiệm bổ sung có thể dùng `experiments.py`
+### Đánh Giá:
 
 ### Điểm Mạnh
 - Tách biệt rõ ràng dễ maintain
 - VETO mechanism bảo vệ người dùng
-- Phục hồi từ lỗi ML gracefully
+- Phục hồi từ lỗi ML 
 
 ### Cần Cải Thiện
-- VETO thresholds (20, 60, 4.0) có cần điều chỉnh không → workshop experts
-- Weights 60/40 cố định → xem xét adaptive weights
+- VETO thresholds (`kbs/config.py`: 20, 60, 4.0, 0.85) — tinh chỉnh thủ công, workshop chuyên gia, hoặc quét lưới: `python scripts/tune_veto.py --block khtn --max-samples 800`
+- Weights **50/50** cố định → có thể thử adaptive weights (chưa có trong code)
 
 ---
 
 ## Bước 2: Thu Thập & Tiền Xử Lý Dữ Liệu
 
 ### Mục Tiêu
-Dữ liệu sạch, chuẩn hóa, và có nhãn phù hợp (nếu đánh giá theo nhãn).
+Dữ liệu sạch, chuẩn hóa, và có nhãn phù hợp.
 
 ### Hiện Trạng v3.0
 
@@ -50,15 +45,8 @@ Dữ liệu sạch, chuẩn hóa, và có nhãn phù hợp (nếu đánh giá th
 | **Missing Values** | Rất ít (< 1%) | ✅ Sạch |
 | **Outliers** | Rất ít (hệ thống chính thức) | ✅ Sạch |
 | **Cân Bằng Lớp** | (Tuỳ chọn) cân bằng theo chiến lược dữ liệu của nhóm | ✅ Giảm bias tần suất |
-| **Gắn Nhãn** | Nhãn `nganh_hoc` theo `NGANH_HOC_MAP` (nguồn nhãn có thể là heuristic hoặc nguồn khác) | ⚠ Cần validate ngoài thực tế |
 
-### Đánh Giá: ⭐ **GOOD** (8/10)
 
-- ✅ **Dữ liệu thực tế** từ THPT 2024 (không synthetic)
-- ✅ (Tuỳ chọn) **cân bằng lớp** trước khi train (giảm bias tần suất nhãn)
-- ✅ **Sạch & chuẩn** (ít missing/outliers)
-- ⚠ **Heuristic nhãn** không thay thế khảo sát chuyên gia
-- ⚠ **Một năm dữ liệu** — có thể mở rộng nhiều năm nếu có file tương tự
 
 ### Điểm Mạnh
 - Real data từ THPT 2024
@@ -67,7 +55,7 @@ Dữ liệu sạch, chuẩn hóa, và có nhãn phù hợp (nếu đánh giá th
 
 ### Cần Cải Thiện
 - Gom thêm năm (chuẩn bị pipeline ingest + cột thống nhất).
-- Nếu nhãn là heuristic: đánh giá lại `nganh_hoc` so với lựa chọn thực tế của học sinh (nếu có khảo sát).
+
 
 ---
 
@@ -89,13 +77,6 @@ Chọn thuật toán phù hợp, đánh giá, tối ưu.
 | **Metrics** | Accuracy, F1, Confusion Matrix | ✅ Đầy đủ |
 | **Feature Importance** | Có phân tích | ✅ Tốt |
 
-### Đánh Giá: ⭐ **GOOD** (7.5/10)
-
-- ✅ **RF ổn định** cho multiclass classification
-- ✅ **CV 5-fold** tránh overfitting tốt
-- ✅ **Temperature scaling** cải thiện calibration
-- ⚠ **Chỉ thử RF** - chưa so sánh XGBoost/LightGBM
-- ⚠ **Hyperparameter hardcoded** - nên GridSearchCV
 
 ### Test Accuracy
 
@@ -148,13 +129,6 @@ Tập hợp kiến thức, xây dựng luật, conflict resolution.
 | **Giải thích** | Tiếng Việt chi tiết | ✅ Tốt |
 | **Forward Chain** | `chaining_rules` trong `rules_config.json` + `forward_chain()` | ✅ Có |
 
-### Đánh Giá: ⭐ **EXCELLENT** (8.5/10)
-
-- ✅ **JSON-based** dễ cập nhật không cần code
-- ✅ **Conflict resolution** logic rõ ràng (specificity > score)
-- ✅ **Giải thích** chi tiết bằng Tiếng Việt
-- ⚠ **Chưa validate ngoài thực tế** — nên workshop chuyên gia
-- ⚠ **Soft thresholds** (fuzzy) chưa có
 
 ### KBS Rules Sample
 
@@ -197,19 +171,12 @@ Công thức kết hợp hợp lý, tối ưu weights.
 
 | Tiêu Chí | Chi Tiết | Đánh Giá |
 |----------|----------|----------|
-| **Công thức** | 0.6×ML + 0.4×KBS | ✅ Hợp lý |
-| **Weights** | 60/40 (tested) | ✅ Tối ưu cho case study |
+| **Công thức** | 0.5×ML + 0.5×KBS | ✅ Hợp lý |
+| **Weights** | 50/50 (mặc định codebase) | ✅ Cân bằng ML–KBS; có thể A/B so với tỷ lệ khác |
 | **Temperature** | T=0.75 | ✅ Cải thiện calibration |
 | **VETO** | KBS phủ quyết ML | ✅ Bảo vệ outliers |
 | **Normalize** | Clip [0,100] | ✅ Đúng |
 
-### Đánh Giá: ⭐ **EXCELLENT** (8/10)
-
-- ✅ **Weights 60/40** cố định trong `hybrid_fusion`; có thể thử nghiệm trong `experiments.py`
-- ✅ **VETO mechanism** bảo vệ outliers
-- ✅ **Normalize** đúng (clip không scale)
-- ✅ **Fallback** to KBS nếu ML fail
-- ⚠ **Weights cố định** - xem xét adaptive
 
 ### Case Study (Validate Fusion)
 
@@ -223,13 +190,13 @@ KBS Predict (KHTN):
   IT: 95, Kinh tế: 75, Y: 85, Kỹ thuật: 80, NLN: 60
 
 Hybrid Fusion:
-  IT: 0.6×45 + 0.4×95 = 27 + 38 = 65% ✅ (Very suitable)
-  Kinh tế: 0.6×35 + 0.4×75 = 21 + 30 = 51%
-  Y: 0.6×10 + 0.4×85 = 6 + 34 = 40%
-  Kỹ thuật: 0.6×8 + 0.4×80 = 4.8 + 32 = 36.8%
-  NLN: 0.6×2 + 0.4×60 = 1.2 + 24 = 25.2%
+  IT: 0.5×45 + 0.5×95 = 22.5 + 47.5 = 70% ✅ (Very suitable)
+  Kinh tế: 0.5×35 + 0.5×75 = 17.5 + 37.5 = 55%
+  Y: 0.5×10 + 0.5×85 = 5 + 42.5 = 47.5%
+  Kỹ thuật: 0.5×8 + 0.5×80 = 4 + 40 = 44%
+  NLN: 0.5×2 + 0.5×60 = 1 + 30 = 31%
 
-Ranking: IT (65%) > Kinh tế (51%) > Y (40%) > ...
+Ranking: IT (70%) > Kinh tế (55%) > Y (47.5%) > ...
 
 → ✅ Reasoning phù hợp: Toán/Lý cao → IT
 ```
@@ -246,7 +213,7 @@ def get_weights(ml_confidence):
     if ml_confidence > 0.8:
         return (0.7, 0.3)  # Trust ML more
     elif ml_confidence > 0.6:
-        return (0.6, 0.4)  # Balance
+        return (0.5, 0.5)  # Balance (mặc định codebase)
     else:
         return (0.4, 0.6)  # Trust KBS more
 ```
@@ -266,11 +233,6 @@ Metrics: accuracy, precision, recall, F1, user satisfaction.
 | **Hybrid vs nhãn** | `scripts/evaluate_model.py` (tùy `EVAL_MAX_SAMPLES`) | Đo mức hybrid “đồng ý” với nhãn (nếu nhãn là heuristic thì đây là mức “khớp heuristic”) |
 | **User Satisfaction** | Chưa có khảo sát | ❓ |
 
-### Đánh Giá: ⭐ **GOOD** (7.5/10) — định tính
-
-- ✅ Pipeline đánh giá ML + hybrid có trong repo
-- ⚠ Không gắn số đích danh trong tài liệu (tránh lệch với từng lần train)
-- ❓ **User satisfaction** chưa test với thực tế
 
 ### Hiệu Suất Chi Tiết
 
@@ -287,7 +249,7 @@ Xem classification report / confusion matrix in ra khi chạy `scripts/train_mod
 ### Mục Tiêu
 Optimize hiệu suất, chuẩn bị production.
 
-### Hiện Trạng v3.0
+### Hiện Trạng 
 
 | Item | Status | Ghi Chú |
 |------|--------|---------|
@@ -302,85 +264,6 @@ Optimize hiệu suất, chuẩn bị production.
 | **Container** | ⚠ | Chưa Docker |
 | **Scalability** | ⚠ | Single-instance, cần load balancer |
 
-### Đánh Giá: ⭐ **FAIR** (7/10)
 
-- ✅ **Code quality** tốt
-- ✅ **Error handling** rõ ràng
-- ⚠ **Monitoring** cần dashboard
-- ⚠ **Testing** cần bổ sung
-- ⚠ **Deployment** chưa automated
 
-### Production Checklist
 
-```bash
-# [✅] Code
-- [ ] Code review (peer review)
-- [ ] Static analysis (pylint, flake8)
-- [ ] Security scan (bandit)
-
-# [⚠] Testing
-- [ ] Unit tests (>80% coverage)
-- [ ] Integration tests
-- [ ] Load testing (1000 req/min)
-- [ ] A/B testing (100 users, 30 days)
-
-# [⚠] Deployment
-- [ ] Docker image (slim, <500MB)
-- [ ] CI/CD pipeline (GitHub Actions)
-- [ ] Health checks (liveness, readiness probes)
-- [ ] Logging (structured, JSON)
-- [ ] Monitoring (Prometheus, Grafana)
-- [ ] Alerting (PagerDuty)
-
-# [⚠] Documentation
-- [ ] API docs (OpenAPI/Swagger)
-- [ ] Runbooks (troubleshooting)
-- [ ] SLA (99.5% uptime)
-```
-
----
-
-## Tóm Tắt 7 Bước
-
-| Bước | Nội Dung | Điểm | Status |
-|------|----------|------|--------|
-| 1 | Phân chia ML vs KBS | 9/10 | ✅ Excellent |
-| 2 | Dữ liệu & tiền xử lý | 8/10 | ✅ Good |
-| 3 | Huấn luyện ML | 7.5/10 | ✅ Good |
-| 4 | Xây dựng KBS | 8.5/10 | ✅ Excellent |
-| 5 | Fusion ML + KBS | 8/10 | ✅ Excellent |
-| 6 | Đánh giá hiệu suất | 7.5/10 | ✅ Good |
-| 7 | Tối ưu & deployment | 7/10 | ⚠ Fair |
-| **TỔNG ĐIỂM** | **7.9/10** | **✅ Good** | **Production Ready** |
-
----
-
-## Khuyến Cáo Cuối Cùng
-
-### ✅ Go Live Nếu:
-
-1. ✅ **Rules validated** bởi 10+ giáo viên → sign-off
-2. ✅ **A/B test** với 100+ học sinh → satisfaction ≥ 75%
-3. ✅ **Monitoring** setup (logs, alerts, dashboard)
-4. ✅ **Fallback plan** rõ ràng (manual review nếu confidence < 50%)
-
-### ⚠ Điều Kiện:
-
-- **SLA:** 99.5% uptime, 100ms response time
-- **Accuracy:** Maintain ≥ 70% top-1 accuracy
-- **Safety:** VETO mechanism always active
-- **Feedback Loop:** Monthly review user satisfaction
-
-### 🚀 Priority
-
-1. **Week 1-2:** Expert validation workshop
-2. **Week 3-4:** Hyperparameter tuning + A/B test
-3. **Week 5-6:** Monitoring setup + CI/CD
-4. **Week 7-8:** Go live with SLA
-
----
-
-**Đánh giá:** 30/04/2026  
-**Phiên bản:** 3.0  
-**Kết luận:** ✅ **PRODUCTION READY** (with conditions)  
-**Reviewer:** Hybrid KBS-ML Team

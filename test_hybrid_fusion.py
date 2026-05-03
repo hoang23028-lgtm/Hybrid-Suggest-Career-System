@@ -12,6 +12,8 @@ Test suite để kiểm tra hybrid fusion engine:
 import pytest
 from hybrid_fusion import (
     KnowledgeRuleEngine,
+    ML_WEIGHT,
+    KBS_WEIGHT,
     calculate_ml_score,
     calculate_kbs_score,
     calculate_hybrid_score,
@@ -158,6 +160,14 @@ class TestKBS:
         result = calculate_kbs_score(sample_scores_it_specialist, 0, block='khtn')
         assert 'chain_applied' in result, "Result phải có chain_applied"
         assert 'chain_details' in result, "Result phải có chain_details"
+
+    def test_kbs_has_reasoning_chain(self, sample_scores_it_specialist):
+        """Mỗi ngành có chuỗi suy luận KBS (reasoning_chain) từng bước"""
+        result = calculate_kbs_score(sample_scores_it_specialist, 0, block='khtn')
+        assert 'reasoning_chain' in result
+        assert isinstance(result['reasoning_chain'], list)
+        assert len(result['reasoning_chain']) >= 3
+        assert any('Bước 1' in s for s in result['reasoning_chain'])
     
     def test_kbs_forward_chaining(self):
         """Kiểm tra forward chaining hoạt động: IT + Anh>=7 → bonus"""
@@ -226,13 +236,13 @@ class TestMLScore:
 # ==================== TEST HYBRID SCORE ====================
 
 class TestHybridScore:
-    """Kiểm tra Hybrid Score = 0.6*ML + 0.4*KBS"""
-    
+    """Kiểm tra Hybrid Score = ML_WEIGHT*ML + KBS_WEIGHT*KBS"""
+
     def test_hybrid_formula(self, ml_model, sample_scores_it_specialist):
-        """Kiểm tra công thức Hybrid: 0.6*ML + 0.4*KBS"""
+        """Kiểm tra công thức Hybrid: ML_WEIGHT*ML + KBS_WEIGHT*KBS"""
         result = calculate_hybrid_score(sample_scores_it_specialist, 0, block='khtn', model=ml_model)
         if result['ml_score'] is not None:
-            expected = 0.6 * result['ml_score'] + 0.4 * result['kbs_score']
+            expected = ML_WEIGHT * result['ml_score'] + KBS_WEIGHT * result['kbs_score']
             assert abs(result['hybrid_score'] - expected) < 0.1, f"Công thức hybrid sai: {result['hybrid_score']} vs {expected}"
     
     def test_hybrid_score_range(self, ml_model, sample_scores_balanced):
@@ -247,10 +257,10 @@ class TestHybridScore:
         assert len(result['explanation']) > 0, "Explanation không được trống"
     
     def test_hybrid_weights(self, ml_model, sample_scores_balanced):
-        """Kiểm tra trọng lượng: ML=0.6, KBS=0.4"""
+        """Kiểm tra trọng lượng mặc định: ML_WEIGHT / KBS_WEIGHT"""
         result = calculate_hybrid_score(sample_scores_balanced, 0, block='khtn', model=ml_model)
-        assert result['ml_weight'] == 0.6, "ML weight phải 0.6"
-        assert result['kbs_weight'] == 0.4, "KBS weight phải 0.4"
+        assert result['ml_weight'] == ML_WEIGHT, "ML weight phải khớp ML_WEIGHT"
+        assert result['kbs_weight'] == KBS_WEIGHT, "KBS weight phải khớp KBS_WEIGHT"
     
     def test_hybrid_it_specialist(self, ml_model, sample_scores_it_specialist):
         """Kiểm tra IT specialist có Hybrid score cao"""
@@ -281,6 +291,8 @@ class TestRanking:
             assert 'rank' in item, "Mỗi item phải có rank"
             assert 'major' in item, "Mỗi item phải có major"
             assert 'hybrid_score' in item, "Mỗi item phải có hybrid_score"
+            assert 'reasoning_chain' in item
+            assert isinstance(item['reasoning_chain'], list)
     
     def test_ranking_ordered_descending(self, ml_model, sample_scores_balanced):
         """Kiểm tra ranking sắp xếp giảm dần theo Hybrid score"""
@@ -319,7 +331,7 @@ class TestIntegration:
         
         # Step 3: Tính Hybrid
         hybrid = calculate_hybrid_score(sample_scores_it_specialist, 0, block='khtn', model=ml_model)
-        expected_hybrid = 0.6 * ml['score'] + 0.4 * kbs['score']
+        expected_hybrid = ML_WEIGHT * ml['score'] + KBS_WEIGHT * kbs['score']
         assert abs(hybrid['hybrid_score'] - expected_hybrid) < 0.5, "Hybrid formula sai"
         
         # Step 4: Ranking
@@ -391,7 +403,7 @@ class TestKBSVeto:
         """Không veto khi ML và KBS đồng thuận (IT specialist)"""
         result = calculate_hybrid_score(sample_scores_it_specialist, 0, block='khtn', model=ml_model)
         assert result['vetoed'] is False, "Không nên veto cho IT specialist hợp lệ"
-        assert result['ml_weight'] == 0.6, "Trọng số bình thường khi không veto"
+        assert result['ml_weight'] == ML_WEIGHT, "Trọng số bình thường khi không veto"
     
     def test_veto_adjusts_hybrid_score(self, ml_model):
         """Khi veto, hybrid score phải gần KBS hơn (KBS dominant)"""
@@ -409,7 +421,8 @@ class TestKBSVeto:
         """Khi veto, explanation phải chứa thông tin veto"""
         kbs_result = {'score': 20, 'rule_name': 'IT_Not_Fit', 'reason': 'test',
                       'description': 'test', 'relevance_score': 0,
-                      'chain_applied': False, 'chain_details': []}
+                      'chain_applied': False, 'chain_details': [],
+                      'reasoning_chain': []}
         veto = check_kbs_veto([5]*6, 0, kbs_score=20, ml_score=70, kbs_result=kbs_result, block='khtn')
         assert veto['vetoed'] is True
         assert 'veto_reason' in veto

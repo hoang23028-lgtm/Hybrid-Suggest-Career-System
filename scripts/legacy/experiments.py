@@ -102,7 +102,7 @@ def experiment_weight_ratios(block: str, X_test, y_test, model, sample_size=2000
         acc = accuracy_score(y_sample, y_pred)
         f1 = f1_score(y_sample, y_pred, average='macro')
         
-        marker = " ◀ hiện tại" if abs(ml_weight - 0.6) < 0.01 else ""
+        marker = " ◀ hiện tại" if abs(ml_weight - 0.5) < 0.01 else ""
         logger.info(f"{ml_weight*100:5.0f}% {kbs_weight*100:5.0f}% {acc:10.4f} {f1:10.4f}{marker}")
         
         results.append({
@@ -117,9 +117,9 @@ def experiment_weight_ratios(block: str, X_test, y_test, model, sample_size=2000
     logger.info(f"\n🏆 Tỷ lệ tối ưu: ML={best['ml_weight']*100:.0f}% / KBS={best['kbs_weight']*100:.0f}%")
     logger.info(f"   Accuracy: {best['accuracy']:.4f}, F1: {best['f1']:.4f}")
     
-    current = next(r for r in results if abs(r['ml_weight'] - 0.6) < 0.01)
+    current = next(r for r in results if abs(r['ml_weight'] - 0.5) < 0.01)
     diff = best['accuracy'] - current['accuracy']
-    logger.info(f"   So với 60/40 hiện tại: {diff:+.4f} ({diff*100:+.2f}%)")
+    logger.info(f"   So với 50/50 hiện tại: {diff:+.4f} ({diff*100:+.2f}%)")
     
     return results
 

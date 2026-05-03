@@ -6,7 +6,7 @@ from .config import (
     KHTN_FEATURES as _KHTN_FEATURES,
     KHXH_FEATURES as _KHXH_FEATURES,
     KHTN_MAJORS, KHXH_MAJORS,
-    get_features, get_majors, get_major_names
+    get_features, get_majors, get_major_names, get_display_names
 )
 
 
@@ -20,7 +20,7 @@ def _load_rules_config():
 def _build_condition(thresholds, operator, feature_index):
     """
     Chuyển đổi thresholds + operator từ JSON thành callable condition.
-    
+
     Operators:
         AND: tất cả feature >= threshold
         OR_LESS_THAN: bất kỳ feature nào < threshold (dùng cho Not_Fit rules)
@@ -29,7 +29,7 @@ def _build_condition(thresholds, operator, feature_index):
     for feat_name, threshold in thresholds.items():
         idx = feature_index[feat_name]
         checks.append((idx, threshold))
-    
+
     if operator == 'AND':
         return lambda s, _checks=checks: all(s[i] >= t for i, t in _checks)
     elif operator == 'OR_LESS_THAN':
@@ -50,14 +50,14 @@ def _build_chain_condition(threshold_dict, feature_index):
 class KnowledgeRuleEngine:
     """
     Engine thực thi các luật tri thức chuyên gia
-    Phiên bản 3.0: Hỗ trợ 2 khối KHTN/KHXH
-    
+    Hỗ trợ 2 khối KHTN/KHXH
+
     Args:
         block (str): 'khtn' hoặc 'khxh'
     """
-    
+
     MAJOR_NAMES = _MAJOR_NAMES
-    
+
     # Các môn chính liên quan đến từng ngành (index trong feature list của khối)
     # KHTN features: [toan, van, anh, ly, hoa, sinh] → index 0-5
     KHTN_KEY_SUBJECTS = {
@@ -67,7 +67,7 @@ class KnowledgeRuleEngine:
         3: [0, 3, 4],    # Kỹ thuật: Toán, Lý, Hóa
         4: [5, 4, 0],    # Nông-Lâm: Sinh, Hóa, Toán
     }
-    
+
     # KHXH features: [toan, van, anh, lich_su, dia_ly, gdcd] → index 0-5
     KHXH_KEY_SUBJECTS = {
         1: [0, 2, 1],    # Kinh tế: Toán, Anh, Văn
@@ -75,7 +75,7 @@ class KnowledgeRuleEngine:
         6: [5, 3, 1],    # Luật: GDCD, Lịch sử, Văn
         7: [2, 4, 1],    # Du lịch: Anh, Địa lý, Văn
     }
-    
+
     def __init__(self, block='khtn'):
         """Khởi tạo: load luật từ rules_config.json theo khối"""
         self.block = block
@@ -83,19 +83,19 @@ class KnowledgeRuleEngine:
         self.feature_index = {name: idx for idx, name in enumerate(self.feature_names)}
         self.major_indices = get_majors(block)
         self.major_names_block = get_major_names(block)
-        
+
         config = _load_rules_config()
-        
+
         rules_key = 'khtn_rules' if block == 'khtn' else 'khxh_rules'
         chaining_key = block  # 'khtn' hoặc 'khxh'
-        
+
         self.rules = self._load_base_rules(config[rules_key])
         self.chaining_rules = self._load_chaining_rules(
             config['chaining_rules'].get(chaining_key, {})
         )
         self._default_score = config.get('default_score', 10)
         self._max_score = config.get('max_score', 100)
-    
+
     # ==================== LOAD RULES FROM JSON ====================
     def _load_base_rules(self, base_rules_json):
         """Load luật cơ sở từ JSON, chuyển thresholds thành lambda conditions"""
@@ -116,7 +116,7 @@ class KnowledgeRuleEngine:
                 })
             rules[major_index] = major_rules
         return rules
-    
+
     def _load_chaining_rules(self, chaining_json):
         """Load luật suy luận chuỗi từ JSON"""
         chaining_rules = {}
@@ -135,12 +135,12 @@ class KnowledgeRuleEngine:
                 })
             chaining_rules[major_index] = chain_list
         return chaining_rules
-    
+
     def calculate_relevance_score(self, user_scores, major_index):
         """
         Tính điểm trung bình các môn liên quan đến ngành
         Dùng làm tiêu chí phá hòa (tie-breaking) khi KBS score bằng nhau
-        
+
         Args:
             user_scores (list): 6 điểm theo thứ tự features của khối
             major_index (int): chỉ số ngành
@@ -152,12 +152,12 @@ class KnowledgeRuleEngine:
         if not key_subjects:
             return 0.0
         return sum(user_scores[i] for i in key_subjects) / len(key_subjects)
-    
+
     # ==================== CONFLICT RESOLUTION ====================
     def resolve_conflicts(self, matched_rules):
         """
         Giải quyết xung đột khi nhiều luật cùng khớp.
-        
+
         Chiến lược (theo thứ tự ưu tiên):
           1. Specificity: Luật có nhiều điều kiện hơn ưu tiên hơn
           2. Score: Điểm cao hơn ưu tiên hơn
@@ -166,14 +166,14 @@ class KnowledgeRuleEngine:
             return None
         if len(matched_rules) == 1:
             return matched_rules[0]
-        
+
         sorted_rules = sorted(
             matched_rules,
             key=lambda r: (r.get('specificity', 1), r['score']),
             reverse=True
         )
         return sorted_rules[0]
-    
+
     # ==================== FORWARD CHAINING ====================
     def forward_chain(self, user_scores, major_index, base_rule_name, base_score):
         """
@@ -182,7 +182,7 @@ class KnowledgeRuleEngine:
         """
         chain_details = []
         bonus_total = 0
-        
+
         chains = self.chaining_rules.get(major_index, [])
         for chain in chains:
             try:
@@ -196,23 +196,90 @@ class KnowledgeRuleEngine:
                         })
             except Exception:
                 continue
-        
+
         final_score = min(self._max_score, base_score + bonus_total)
         return final_score, chain_details
-    
-    # ==================== EVALUATE ====================
+
+    def _reasoning_chain_invalid(self, major_index):
+        major = self.MAJOR_NAMES[major_index] if major_index < len(self.MAJOR_NAMES) else 'Unknown'
+        return [
+            f"Bước 1 — Khối {self.block.upper()}: ngành «{major}» (mã {major_index}) không thuộc tập ngành của khối này.",
+            f"Bước 2 — Không áp dụng luật KBS của khối; gán điểm placeholder {self._default_score}/100 (không dùng để gợi ý).",
+        ]
+
+    def _reasoning_chain_default(self, major_index, relevance_score):
+        major = self.MAJOR_NAMES[major_index]
+        return [
+            f"Bước 1 — Ngành «{major}»: điểm liên quan (trung bình môn trọng tâm) ≈ {relevance_score:.2f}/10.",
+            "Bước 2 — Không có luật cơ sở nào khớp với tổ hợp điểm hiện tại.",
+            f"Bước 3 — Áp điểm mặc định {self._default_score}/100 (chưa suy ra được mức phù hợp có điều kiện).",
+        ]
+
+    def _reasoning_chain_matched(
+        self,
+        user_scores,
+        major_index,
+        relevance_score,
+        best_rule,
+        base_score,
+        final_score,
+        chain_details,
+    ):
+        major = self.MAJOR_NAMES[major_index]
+        display = get_display_names(self.block)
+        key_map = self.KHTN_KEY_SUBJECTS if self.block == 'khtn' else self.KHXH_KEY_SUBJECTS
+        idxs = key_map.get(major_index, [])
+        if idxs:
+            parts = [
+                f"{display.get(self.feature_names[i], self.feature_names[i])}={user_scores[i]:g}"
+                for i in idxs
+            ]
+            step1 = (
+                f"Bước 1 — Ngành «{major}», môn trọng tâm: {', '.join(parts)} "
+                f"(điểm liên quan TB ≈ {relevance_score:.2f}/10)."
+            )
+        else:
+            step1 = f"Bước 1 — Ngành «{major}»: điểm liên quan TB ≈ {relevance_score:.2f}/10."
+
+        steps = [
+            step1,
+            (
+                f"Bước 2 — Giải quyết xung đột: chọn luật cơ sở «{best_rule['name']}» "
+                f"(độ cụ thể {best_rule.get('specificity', '?')}) → điểm nền {base_score}/100. "
+                f"{best_rule['reason']}"
+            ),
+        ]
+        step_no = 3
+        if chain_details:
+            for c in chain_details:
+                steps.append(
+                    f"Bước {step_no} — Chuỗi «{c['chain_name']}»: +{c['bonus']} điểm. {c['reason']}"
+                )
+                step_no += 1
+        else:
+            steps.append(
+                f"Bước {step_no} — Không có luật chuỗi bổ sung nào thỏa (theo chaining_rules của ngành này)."
+            )
+            step_no += 1
+        bonus_sum = sum(c['bonus'] for c in chain_details) if chain_details else 0
+        steps.append(
+            f"Bước {step_no} — Tổng kết: {base_score} + {bonus_sum} (bonus, trần {self._max_score}) "
+            f"→ điểm KBS cuối {final_score}/100."
+        )
+        return steps
+
     def evaluate(self, user_scores, major_index):
         """
         Đánh giá điểm phù hợp dựa trên luật tri thức
-        
+
         Args:
             user_scores (list): 6 điểm theo thứ tự features của khối
             major_index (int): chỉ số ngành (phải thuộc khối hiện tại)
         Returns:
-            dict: {score, rule_name, description, reason, major, relevance_score,
-                   chain_applied, chain_details}
+            dict: gồm reasoning_chain (list[str]) — chuỗi suy luận từng bước tiếng Việt
         """
         if major_index not in self.rules:
+            rc = self._reasoning_chain_invalid(major_index)
             return {
                 'score': self._default_score,
                 'rule_name': 'INVALID',
@@ -221,38 +288,45 @@ class KnowledgeRuleEngine:
                 'major': self.MAJOR_NAMES[major_index] if major_index < len(self.MAJOR_NAMES) else 'Unknown',
                 'relevance_score': 0,
                 'chain_applied': False,
-                'chain_details': []
+                'chain_details': [],
+                'reasoning_chain': rc,
             }
-        
+
         rules = self.rules[major_index]
         matched_rules = []
-        
+
         relevance_score = self.calculate_relevance_score(user_scores, major_index)
-        
-        # Bước 1: Tìm tất cả luật cơ sở khớp
+
         for rule in rules:
             try:
                 if rule['condition'](user_scores):
                     matched_rules.append(rule)
             except Exception:
                 continue
-        
-        # Nếu có luật khớp
+
         if matched_rules:
-            # Bước 2: Conflict Resolution
             best_rule = self.resolve_conflicts(matched_rules)
             base_score = best_rule['score']
-            
-            # Bước 3: Forward Chaining
+
             final_score, chain_details = self.forward_chain(
                 user_scores, major_index, best_rule['name'], base_score
             )
-            
+
             reason = best_rule['reason']
             if chain_details:
                 chain_reasons = [c['reason'] for c in chain_details]
                 reason += ' | Suy luận chuỗi: ' + ', '.join(chain_reasons)
-            
+
+            reasoning_chain = self._reasoning_chain_matched(
+                user_scores,
+                major_index,
+                relevance_score,
+                best_rule,
+                base_score,
+                final_score,
+                chain_details,
+            )
+
             return {
                 'score': final_score,
                 'rule_name': best_rule['name'],
@@ -261,10 +335,11 @@ class KnowledgeRuleEngine:
                 'major': self.MAJOR_NAMES[major_index],
                 'relevance_score': round(relevance_score, 2),
                 'chain_applied': len(chain_details) > 0,
-                'chain_details': chain_details
+                'chain_details': chain_details,
+                'reasoning_chain': reasoning_chain,
             }
-        
-        # Nếu không có luật khớp
+
+        rc = self._reasoning_chain_default(major_index, relevance_score)
         return {
             'score': self._default_score,
             'rule_name': 'DEFAULT',
@@ -273,7 +348,8 @@ class KnowledgeRuleEngine:
             'major': self.MAJOR_NAMES[major_index],
             'relevance_score': round(relevance_score, 2),
             'chain_applied': False,
-            'chain_details': []
+            'chain_details': [],
+            'reasoning_chain': rc,
         }
 
     def evaluate_all_majors(self, user_scores):
@@ -307,7 +383,8 @@ class KnowledgeRuleEngine:
                 'major': result['major'],
                 'score': result['score'],
                 'rule': result['rule_name'],
-                'reason': result['reason']
+                'reason': result['reason'],
+                'reasoning_chain': result.get('reasoning_chain', []),
             })
         return ranking
 
@@ -331,24 +408,24 @@ class KnowledgeRuleEngine:
 if __name__ == "__main__":
     # Test KHTN
     kbs_khtn = KnowledgeRuleEngine(block='khtn')
-    
+
     # KHTN features: [toan, van, anh, ly, hoa, sinh]
     print("\n### TEST: Học sinh IT Chuyên (KHTN) ###")
     scores_it = [9, 5, 7, 8.5, 5, 4]
     kbs_khtn.print_ranking(scores_it)
-    
+
     print("\n### TEST: Học sinh Y Khoa (KHTN) ###")
     scores_yk = [6, 7, 6, 5, 8, 8.5]
     kbs_khtn.print_ranking(scores_yk)
-    
+
     # Test KHXH
     kbs_khxh = KnowledgeRuleEngine(block='khxh')
-    
+
     # KHXH features: [toan, van, anh, lich_su, dia_ly, gdcd]
     print("\n### TEST: Học sinh Luật (KHXH) ###")
     scores_luat = [6, 7.5, 7, 8.5, 6, 8.5]
     kbs_khxh.print_ranking(scores_luat)
-    
+
     print("\n### TEST: Học sinh Du lịch (KHXH) ###")
     scores_dl = [5, 8, 8.5, 6, 8, 6]
     kbs_khxh.print_ranking(scores_dl)

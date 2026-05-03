@@ -4,7 +4,7 @@
 
   
 Kết Hợp (Fusion):
-  Hybrid_Score = 0.6 × ML_Score + 0.4 × KBS_Score
+  Hybrid_Score = 0.5 × ML_Score + 0.5 × KBS_Score
 """
 
 from pathlib import Path
@@ -15,7 +15,17 @@ import pandas as pd
 
 # Import KBS engine
 from .knowledge_rules import KnowledgeRuleEngine
-from .config import MAJOR_NAMES, get_features, get_model_path, get_majors, get_display_names
+from .config import (
+    MAJOR_NAMES,
+    VETO_KBS_DOMINANT_WEIGHT,
+    VETO_KBS_NOT_FIT_THRESHOLD,
+    VETO_KEY_SUBJECT_MIN,
+    VETO_ML_HIGH_THRESHOLD,
+    get_display_names,
+    get_features,
+    get_model_path,
+    get_majors,
+)
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -23,16 +33,11 @@ logger.setLevel(logging.INFO)
 
 # ==================== CONFIG ====================
 
-# Weight: 60% ML, 40% KBS
-ML_WEIGHT = 0.6
-KBS_WEIGHT = 0.4
+# Weight: 50% ML, 50% KBS
+ML_WEIGHT = 0.5
+KBS_WEIGHT = 0.5
 
-# ==================== KBS VETO CONFIG ====================
-# KBS có quyền phủ quyết (veto) kết quả ML khi phát hiện bất hợp lý rõ ràng
-VETO_KBS_NOT_FIT_THRESHOLD = 20     # KBS score <= 20 → ngành "Không phù hợp"
-VETO_ML_HIGH_THRESHOLD = 60         # ML score > 60 khi KBS nói Not_Fit → bất hợp lý
-VETO_KEY_SUBJECT_MIN = 4.0          # Môn trọng tâm < 4.0 → veto cứng
-VETO_KBS_DOMINANT_WEIGHT = 0.85     # Khi veto: KBS chiếm 85%, ML chỉ 15%
+# VETO_* mặc định: kbs/config.py (có thể gán đè thuộc tính module này khi tune)
 
 # Cached engines (singleton per block)
 _kbs_engines = {}
@@ -376,7 +381,7 @@ def calculate_hybrid_score(user_scores, major_index, block: str, model=None):
             f"(weights: ML={ml_weight_actual}, KBS={kbs_weight_actual})"
         )
     else:
-        # Kết hợp bình thường: 60% ML + 40% KBS
+        # Kết hợp bình thường: 50% ML + 50% KBS
         hybrid_score = ML_WEIGHT * ml_score + KBS_WEIGHT * kbs_score
         ml_weight_actual = ML_WEIGHT
         kbs_weight_actual = KBS_WEIGHT
@@ -410,11 +415,20 @@ def calculate_hybrid_score(user_scores, major_index, block: str, model=None):
     }
 
 
+def _format_kbs_reasoning_chain(kbs_result):
+    rc = kbs_result.get('reasoning_chain') or []
+    if not rc:
+        return ""
+    body = "\n".join(f"   • {step}" for step in rc)
+    return f"\n🔗 CHUỖI SUY LUẬN KBS (theo ngành):\n{body}\n"
+
+
 def _create_explanation(user_scores, major_index, kbs_score, ml_score, hybrid_score, kbs_result, ml_result, veto=None):
     """Tạo giải thích chi tiết (Vietnamese)"""
-    
+
     major = MAJOR_NAMES[major_index]
-    
+    chain_block = _format_kbs_reasoning_chain(kbs_result)
+
     if ml_score is None:
         return f"""
 NGÀNH: {major}
@@ -424,7 +438,7 @@ NGÀNH: {major}
    Luật: {kbs_result.get('rule_name', 'N/A')}
    Lý do: {kbs_result.get('reason', 'N/A')}
    Điểm: {kbs_score}%
-"""
+{chain_block}"""
     else:
         # Xác định trọng số thực tế (có thể bị veto điều chỉnh)
         vetoed = veto and veto.get('vetoed', False)
@@ -442,7 +456,7 @@ NGÀNH: {major}
 ⛔ KBS PHỦ QUYẾT (VETO):
    Loại: {veto['veto_type']}
    Lý do: {veto['veto_reason']}
-   Trọng số điều chỉnh: ML {ml_w*100:.0f}% / KBS {kbs_w*100:.0f}% (thay vì 60/40)
+   Trọng số điều chỉnh: ML {ml_w*100:.0f}% / KBS {kbs_w*100:.0f}% (thay vì {ML_WEIGHT*100:.0f}/{KBS_WEIGHT*100:.0f})
 """
         
         return f"""
@@ -463,7 +477,7 @@ LOẠI 1 - LUẬT (Expert Rules):
    , Chi tiết: {kbs_result.get('rule_name', 'N/A')}
    , Lý do: {kbs_result.get('reason', 'N/A')}
    , Điểm KBS: {kbs_score}% ({kbs_w*100:.0f}%)
-
+{chain_block}
 KẾT HỢP CUỐI CÙNG:
    Kết hợp = {ml_w*100:.0f}% (ML) + {kbs_w*100:.0f}% (KBS)
    = {ml_w*100:.0f}% × Dữ liệu + {kbs_w*100:.0f}% × Chuyên gia
@@ -495,7 +509,8 @@ def get_hybrid_ranking(user_scores, block: str, model=None):
             'ml_score': result['ml_score'],
             'kbs_score': result['kbs_score'],
             'relevance_score': result.get('relevance_score', 0),
-            'explanation': result['explanation']
+            'explanation': result['explanation'],
+            'reasoning_chain': (result.get('kbs_details') or {}).get('reasoning_chain', []),
         })
     
     # Sort by hybrid_score descending, tie-break by relevance_score
@@ -525,7 +540,10 @@ def print_hybrid_ranking(user_scores, block: str, model=None):
     
     for item in ranking:
         ml_str = f"{item['ml_score']:.0f}%" if item['ml_score'] is not None else "N/A"
-        formula = f"0.6×{ml_str}+0.4×{item['kbs_score']:.0f}%" if item['ml_score'] is not None else "100%×KBS"
+        formula = (
+            f"{ML_WEIGHT}×{ml_str}+{KBS_WEIGHT}×{item['kbs_score']:.0f}%"
+            if item['ml_score'] is not None else "100%×KBS"
+        )
         print(
             f"{item['rank']:<4} {item['major']:<15} {item['hybrid_score']:<8.0f}% "
             f"{ml_str:<8} {item['kbs_score']:<8.0f}% {formula:<30}"
@@ -541,7 +559,7 @@ if __name__ == "__main__":
     print("HYBRID FUSION ENGINE - TEST")
     print("="*90)
     print("Kết hợp Luật Không AI (KBS) + Luật Từ ML")
-    print("Kết quả = 60% ML + 40% KBS")
+    print(f"Kết quả = {ML_WEIGHT*100:.0f}% ML + {KBS_WEIGHT*100:.0f}% KBS")
     print("="*90)
     
     # Load model (KHTN)

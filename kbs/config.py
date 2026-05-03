@@ -176,6 +176,23 @@ ADVICE_THRESHOLDS = {
 }
 
 # ============================================================================
+# VETO (Hybrid — KBS phủ quyết ML khi mâu thuẫn rõ)
+# Điều chỉnh tại đây hoặc chạy scripts/tune_veto.py để quét lưới trên tập test.
+# ============================================================================
+VETO_KBS_NOT_FIT_THRESHOLD = 20     # KBS <= ngưỡng → coi là "không phù hợp" mạnh
+VETO_ML_HIGH_THRESHOLD = 60         # ML > ngưỡng trong khi KBS thấp → ML quá lạc quan
+VETO_KEY_SUBJECT_MIN = 4.0          # Tất cả môn trọng tâm < giá trị này → veto cứng
+VETO_KBS_DOMINANT_WEIGHT = 0.85     # Khi veto: trọng số KBS (ML = 1 - giá trị này)
+
+# Tên biến dùng cho patch tạm thời (scripts/tune_veto.py)
+VETO_PARAM_KEYS = (
+    'VETO_KBS_NOT_FIT_THRESHOLD',
+    'VETO_ML_HIGH_THRESHOLD',
+    'VETO_KEY_SUBJECT_MIN',
+    'VETO_KBS_DOMINANT_WEIGHT',
+)
+
+# ============================================================================
 # VALIDATION & CONSTRAINTS
 # ============================================================================
 SCORE_MIN = 0

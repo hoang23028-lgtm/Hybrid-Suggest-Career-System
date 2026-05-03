@@ -13,14 +13,14 @@
 | Dữ Liệu | 8/10 | THPT 2024; cỡ mẫu sau `scripts/create_data.py` phụ thuộc CSV (và pipeline tạo dữ liệu) |
 | ML Model | 7.5/10 | Random Forest ổn định, chưa optimize |
 | KBS Engine | 8.5/10 | Conflict resolution tốt, JSON-based dễ maintain |
-| Hybrid Fusion | 8/10 | 60/40 weights, VETO mechanism |
+| Hybrid Fusion | 8/10 | 50/50 ML–KBS, VETO (`kbs/config.py` + `scripts/tune_veto.py`) |
 | Deployment | 8/10 | Streamlit app sạch, UX tốt |
 | Documentation | 8.5/10 | Tài liệu v3.0 chi tiết |
 | **Điểm Chung** | **8.1/10** | **Hệ thống sản xuất ready** |
 
 ### Kết Luận
 
-✅ **Sản Xuất Ready** với điều kiện:
+
 - Thêm monitoring & logging
 - Validate rules với chuyên gia
 - Plan A/B testing với thực tế
@@ -30,8 +30,7 @@
 
 ## II. Đánh Giá Chi Tiết
 
-### A. Kiến Trúc & Thiết Kế — ⭐ 8.5/10
-
+### A. Kiến Trúc & Thiết Kế —
 **Điểm mạnh:**
 - ✓ Kiến trúc 2 khối phản ánh cấu trúc thi tuyển thực tế THPT
 - ✓ Tách rõ ML branch (data-driven) vs KBS branch (rule-based)
@@ -44,14 +43,14 @@
 **Điểm cần cải thiện:**
 - ⚠ Chưa có database centralized (logging, predictions)
 - ✓ `hybrid_fusion` cache model và `KnowledgeRuleEngine` theo khối (singleton đơn giản)
-- ⚠ Config hard-coded trong Python, nên move vào `config.json`
+- ⚠ Một phần cấu hình vẫn trong Python (`kbs/config.py`); VETO đã tập trung tại đây, có script `scripts/tune_veto.py` hỗ trợ quét lưới
 - ⚠ Batch inference chưa hỗ trợ (chỉ single input)
 
 **Khuyến nghị:** batch inference có thể gom `predict_proba` trên ma trận `X` nếu sau này cần API hàng loạt (hiện Streamlit xử lý từng phiên).
 
 ---
 
-### B. Dữ Liệu — ⭐ 8/10
+### B. Dữ Liệu 
 
 **Điểm mạnh:**
 - ✓ Dữ liệu thực tế từ THPT 2024
@@ -60,7 +59,6 @@
 - ✓ Cấu trúc sạch (phạm vi, tên cột chuẩn)
 
 **Điểm cần cải thiện:**
-- ⚠ Nhãn `nganh_hoc` cần được định nghĩa/kiểm chứng (nếu là heuristic thì cần đối chiếu thực tế nếu có khảo sát)
 - ⚠ Chỉ 6 điểm môn (không có sở thích, năng lực khác)
 - ⚠ Dữ liệu một năm (mở rộng khi có thêm file các năm)
 - ⚠ Chưa validate với dữ liệu từ các nguồn khác
@@ -69,7 +67,7 @@
 
 ---
 
-### C. Machine Learning — ⭐ 7.5/10
+### C. Machine Learning
 
 **Điểm mạnh:**
 - ✓ Random Forest model ổn định
@@ -118,19 +116,19 @@ print(results)  # So sánh accuracy
 
 ---
 
-### D. Knowledge-Based System — ⭐ 8.5/10
+### D. Knowledge-Based System
 
 **Điểm mạnh:**
-- ✓ ~20 luật/khối (JSON) hợp lý
+- ✓ 32 luật/khối (JSON) hợp lý
 - ✓ Conflict resolution rõ ràng (specificity + score)
 - ✓ Rules dễ cập nhật không cần code
 - ✓ Tie-breaking logic tự động
 - ✓ Giải thích đầy đủ bằng Tiếng Việt
 
 **Điểm cần cải thiện:**
-- ⚠ Luật chưa được validate bởi 10+ giáo viên
+- ⚠ Luật chưa được validate bởi giáo viên
 - ⚠ Thresholds dựa trên cảm tính (Toan ≥ 8 = sự quyết định)
-- ⚠ Không có Forward Chaining (luật chuỗi bonus)
+- ✓ **Forward chaining** (`chaining_rules` + `forward_chain`) và **`reasoning_chain`** trong KBS engine; cần tiếp tục validate nội dung luật với chuyên gia
 - ⚠ Không có soft thresholds (fuzzy logic)
 - ⚠ Không có dynamic thresholds (theo năm)
 
@@ -156,19 +154,18 @@ python collect_expert_feedback.py
 
 ---
 
-### E. Hybrid Fusion — ⭐ 8/10
+### E. Hybrid Fusion
 
 **Điểm mạnh:**
-- ✓ Weights 60/40 được thử nghiệm (experiments.py)
+- ✓ Weights **50/50** (mặc định `kbs/hybrid_fusion.py`); legacy `scripts/legacy/experiments.py` có thử nhiều tỷ lệ
 - ✓ VETO mechanism bảo vệ output rõ ràng
 - ✓ Fallback to KBS khi ML fail
-- ✓ Normalize scores đúng (clip [0,100])
+- ✓ Chuẩn hoá điểm môn clip [0, 10] trước khi đưa vào ML/KBS
 - ✓ Explanation chi tiết
 
 **Điểm cần cải thiện:**
-- ⚠ Weights cố định 60/40 → nên dynamic dựa trên confidence
-- ⚠ VETO thresholds hardcoded → nên config
-- ⚠ Không có A/B testing (60/40 vs 50/50 vs 70/30)
+- ⚠ Weights cố định 50/50 → có thể dynamic theo confidence (chưa triển khai)
+- ⚠ Chưa có A/B testing thực tế người dùng (50/50 vs tỷ lệ khác)
 - ⚠ Ranking có tie (VD: 55.2% và 55.0%) → tie-breaking cần rõ ràng
 
 **Khuyến nghị:**
@@ -182,25 +179,25 @@ def get_adaptive_weights(ml_confidence: float) -> tuple:
     if ml_confidence > 0.8:
         return (0.7, 0.3)  # 70% ML, 30% KBS
     elif ml_confidence > 0.6:
-        return (0.6, 0.4)  # 60% ML, 40% KBS
+        return (0.5, 0.5)  # 50% ML, 50% KBS
     else:
         return (0.4, 0.6)  # 40% ML, 60% KBS
 
-# A/B test
+# A/B test (gợi ý)
 def ab_test(weights: tuple, test_data: pd.DataFrame):
-    """So sánh 60/40 vs dynamic weights trên test data"""
+    """So sánh 50/50 vs dynamic weights trên test data"""
     pass
 ```
 
 ---
 
-### F. Deployment & UX — ⭐ 8/10
+### F. Deployment & UX
 
 **Điểm mạnh:**
 - ✓ Streamlit app sạch, dễ sử dụng
-- ✓ 3 tabs: Kết quả, Phân tích, So sánh
+- ✓ Hai tab: **Kết quả chính**, **Phân tích chi tiết** (tập trung ngành đề xuất)
 - ✓ Slider input intuitive
-- ✓ Bar chart ranking dễ hiểu
+- ✓ Radar điểm môn (Plotly) trong tab phân tích chi tiết
 - ✓ Error handling tốt
 
 **Điểm cần cải thiện:**
@@ -230,7 +227,7 @@ def export_to_pdf():
 
 ---
 
-### G. Documentation — ⭐ 8.5/10
+### G. Documentation 
 
 **Điểm mạnh:**
 - ✓ 5 file .md v3.0 chi tiết
@@ -274,7 +271,7 @@ def rank(block: str, scores: List[float]):
 | Thành Phần | Sub-tiêu chí | Điểm | Ghi Chú |
 |-----------|-------------|------|--------|
 | **Kiến Trúc** | Tách biệt rõ | 9/10 | 2 khối, JSON-based |
-| | VETO mechanism | 8/10 | Tốt nhưng hardcoded |
+| | VETO mechanism | 8/10 | Tốt; tham số trong `kbs/config.py`, có `tune_veto.py` |
 | | Error handling | 8/10 | Cơ bản nhưng đủ |
 | **Dữ Liệu** | Kích thước | 7/10 | Phụ thuộc CSV; sau cân bằng theo khối |
 | | Chất lượng | 8/10 | Thực tế THPT 2024 |
@@ -287,7 +284,7 @@ def rank(block: str, scores: List[float]):
 | | Conflict res | 9/10 | Specificity + score tốt |
 | | Validation | 7/10 | Chưa expert review |
 | | Giải thích | 9/10 | Chi tiết bằng Tiếng Việt |
-| **Fusion** | Logic | 8/10 | 60/40 weights hợp lý |
+| **Fusion** | Logic | 8/10 | 50/50 weights + VETO hợp lý |
 | | VETO | 8/10 | Bảo vệ output rõ ràng |
 | **Deployment** | UX | 8/10 | Streamlit sạch |
 | | Scalability | 7/10 | Single-instance, không cluster |
@@ -296,74 +293,3 @@ def rank(block: str, scores: List[float]):
 | | Clarity | 9/10 | Tiếng Việt rõ ràng |
 
 ---
-
-## IV. Roadmap Cải Thiện
-
-### Phase 1 (4-6 tuần) - MVP Enhancement
-
-- [ ] Hyperparameter tuning (GridSearchCV)
-- [ ] So sánh XGBoost vs LightGBM
-- [ ] Workshop expert validation (15 giáo viên)
-- [ ] Thêm A/B testing framework
-- [ ] Setup monitoring dashboard
-
-### Phase 2 (2-3 tháng) - Production Ready
-
-- [ ] Cộng dữ liệu 2022-2025 (multi-year)
-- [ ] FastAPI wrapper + OpenAPI docs
-- [ ] Database logging (PostgreSQL)
-- [ ] Docker containerization
-- [ ] CI/CD pipeline (GitHub Actions)
-
-### Phase 3 (3-6 tháng) - Advanced Features
-
-- [ ] Fuzzy logic soft thresholds
-- [ ] Mở rộng chaining_rules / fuzzy thresholds
-- [ ] Dynamic weights (adaptive)
-- [ ] Batch inference API
-- [ ] Mobile app (React Native)
-
----
-
-## V. Risk Assessment
-
-| Risk | Xác Suất | Tác Động | Giảm Thiểu |
-|------|---------|----------|-----------|
-| Dữ liệu cỡ mẫu nhỏ | Cao | Medium | Cộng multi-year data |
-| Rules không validate | Cao | High | Workshop 15 experts |
-| ML accuracy thực tế ≠ test | Medium | High | A/B test real users |
-| VETO threshold sai | Medium | Medium | Feedback loop from users |
-| Model drift theo thời gian | Medium | Medium | Retrain quarterly |
-
----
-
-## VI. Kết Luận & Khuyến Cáo
-
-### ✅ Kết Luận
-
-Hệ thống v3.0 đạt **mức sản xuất ready** (8.1/10) với:
-- Kiến trúc hybrid rõ ràng (ML + KBS + Fusion)
-- JSON-based rules dễ maintain
-- VETO mechanism bảo vệ output
-- Documentation tốt v3.0
-
-### ⚠ Điều Kiện Go-Live
-
-1. **Validate Rules:** Workshop 15 giáo viên → sign-off
-2. **Test A/B:** Real users (100 học sinh) → 30 ngày
-3. **Monitoring:** Setup logging + alert dashboard
-4. **Fallback Plan:** Manual review nếu confidence < 50%
-5. **SLA:** Target accuracy ≥ 70%, satisfaction ≥ 75%
-
-### 🚀 Ưu Tiên
-
-1. **Ngắn hạn (2 tuần):** Expert validation workshop
-2. **Trung hạn (1 tháng):** Hyperparameter tuning + A/B test
-3. **Dài hạn (3-6 tháng):** Multi-year data + advanced features
-
----
-
-**Đánh giá ngày:** 30/04/2026  
-**Phiên bản:** 3.0  
-**Trạng thái:** ✅ Recommend for Production (with conditions)  
-**Reviewer:** Hybrid KBS-ML Team
