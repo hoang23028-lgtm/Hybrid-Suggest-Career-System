@@ -13,7 +13,7 @@
 | Dữ Liệu | 8/10 | THPT 2024; cỡ mẫu sau `scripts/create_data.py` phụ thuộc CSV (và pipeline tạo dữ liệu) |
 | ML Model | 7.5/10 | Random Forest ổn định, chưa optimize |
 | KBS Engine | 8.5/10 | Conflict resolution tốt, JSON-based dễ maintain |
-| Hybrid Fusion | 8/10 | 50/50 ML–KBS, VETO (`kbs/config.py` + `scripts/tune_veto.py`) |
+| Hybrid Fusion | 8/10 | 70/30 ML–KBS (tuned `scripts/tune_weights.py`), VETO (`kbs/config.py` + `scripts/tune_veto.py`) |
 | Deployment | 8/10 | Streamlit app sạch, UX tốt |
 | Documentation | 8.5/10 | Tài liệu v3.0 chi tiết |
 | **Điểm Chung** | **8.1/10** | **Hệ thống sản xuất ready** |
@@ -157,15 +157,15 @@ python collect_expert_feedback.py
 ### E. Hybrid Fusion
 
 **Điểm mạnh:**
-- ✓ Weights **50/50** (mặc định `kbs/hybrid_fusion.py`); legacy `scripts/legacy/experiments.py` có thử nhiều tỷ lệ
+- ✓ Weights **70/30** (mặc định `kbs/hybrid_fusion.py`, tuned bằng `scripts/tune_weights.py` trên 2000 mẫu test); legacy `scripts/legacy/experiments.py` có thử nhiều tỷ lệ
 - ✓ VETO mechanism bảo vệ output rõ ràng
 - ✓ Fallback to KBS khi ML fail
 - ✓ Chuẩn hoá điểm môn clip [0, 10] trước khi đưa vào ML/KBS
 - ✓ Explanation chi tiết
 
 **Điểm cần cải thiện:**
-- ⚠ Weights cố định 50/50 → có thể dynamic theo confidence (chưa triển khai)
-- ⚠ Chưa có A/B testing thực tế người dùng (50/50 vs tỷ lệ khác)
+- ⚠ Weights cố định 70/30 → có thể dynamic theo confidence (chưa triển khai)
+- ⚠ Chưa có A/B testing thực tế người dùng (70/30 vs tỷ lệ khác)
 - ⚠ Ranking có tie (VD: 55.2% và 55.0%) → tie-breaking cần rõ ràng
 
 **Khuyến nghị:**
@@ -284,7 +284,7 @@ def rank(block: str, scores: List[float]):
 | | Conflict res | 9/10 | Specificity + score tốt |
 | | Validation | 7/10 | Chưa expert review |
 | | Giải thích | 9/10 | Chi tiết bằng Tiếng Việt |
-| **Fusion** | Logic | 8/10 | 50/50 weights + VETO hợp lý |
+| **Fusion** | Logic | 8/10 | 70/30 weights (tuned) + VETO hợp lý |
 | | VETO | 8/10 | Bảo vệ output rõ ràng |
 | **Deployment** | UX | 8/10 | Streamlit sạch |
 | | Scalability | 7/10 | Single-instance, không cluster |

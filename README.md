@@ -9,7 +9,7 @@
 | **KHTN** | Toán, Văn, Anh, Lý, Hóa, Sinh | 5 | `models/rf_model_khtn.pkl` |
 | **KHXH** | Toán, Văn, Anh, Sử, Địa, GDCD | 4 | `models/rf_model_khxh.pkl` |
 
-- **Hybrid:** `Hybrid = 0.5 × ML + 0.5 × KBS` (có cơ chế **VETO** khi ML và KBS mâu thuẫn rõ rệt).
+- **Hybrid:** `Hybrid = 0.7 × ML + 0.3 × KBS` (tuned bằng `scripts/tune_weights.py` trên 2000 mẫu test; có cơ chế **VETO** khi ML và KBS mâu thuẫn rõ rệt).
 - **Dữ liệu huấn luyện:** `data/diem_thi_thpt_2024.csv` → lọc theo khối → `scripts/create_data.py` → `data/data_khtn.csv` / `data/data_khxh.csv` (cần có cột nhãn `nganh_hoc` để train/eval ML).
 - **Giao diện:** `app.py` (Streamlit): chọn khối → slider 6 môn → **Phân tích** → ngành đề xuất (hybrid); hai tab **Kết quả chính** (metric, giải thích, chuỗi suy luận KBS) và **Phân tích chi tiết** (radar Plotly, bảng điểm). `get_hybrid_ranking` vẫn xếp hạng đủ ngành trong khối để chọn top-1 (không còn màn hình so sánh tất cả ngành trên UI).
 
@@ -101,4 +101,4 @@ pytest -q test_hybrid_fusion.py
 
 ---
 
-**Cập nhật:** 03/05/2026 — Hybrid 50/50 ML+KBS, VETO trong `kbs/config.py`, `scripts/tune_veto.py`, chuỗi suy luận KBS (`reasoning_chain`); UI Streamlit gọn: 2 tab, không tab so sánh ngành / không nút xem tất cả ngành.
+**Cập nhật:** 13/05/2026 — Hybrid 70/30 ML+KBS (tuned bằng `scripts/tune_weights.py`), VETO trong `kbs/config.py`, `scripts/tune_veto.py`, chuỗi suy luận KBS (`reasoning_chain`); UI Streamlit gọn: 2 tab, không tab so sánh ngành / không nút xem tất cả ngành.

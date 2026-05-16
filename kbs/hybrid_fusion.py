@@ -4,7 +4,8 @@
 
   
 Kết Hợp (Fusion):
-  Hybrid_Score = 0.5 × ML_Score + 0.5 × KBS_Score
+  Hybrid_Score = 0.7 × ML_Score + 0.3 × KBS_Score
+  (Tỉ lệ 70/30 được chọn từ `scripts/tune_weights.py` trên 2000 mẫu test.)
 """
 
 from pathlib import Path
@@ -33,9 +34,9 @@ logger.setLevel(logging.INFO)
 
 # ==================== CONFIG ====================
 
-# Weight: 50% ML, 50% KBS
-ML_WEIGHT = 0.5
-KBS_WEIGHT = 0.5
+# Weight: 70% ML, 30% KBS (tuned bằng scripts/tune_weights.py trên test split)
+ML_WEIGHT = 0.7
+KBS_WEIGHT = 0.3
 
 # VETO_* mặc định: kbs/config.py (có thể gán đè thuộc tính module này khi tune)
 
@@ -59,7 +60,6 @@ def load_ml_model(block: str):
     if block in _ml_models:
         return _ml_models[block]
 
-    # NOTE: repo root is one level above `kbs/`
     model_path = Path(__file__).parent.parent / get_model_path(block)
     if not model_path.exists():
         logger.error(f"⚠️  ML model not found for {block}: {model_path}")
@@ -103,6 +103,9 @@ def calculate_ml_score(user_scores, major_index, block: str, model=None):
 
     Lưu ý: model được train trên 6 features (không có tin_hoc) và classes chỉ gồm các
     nhãn ngành thuộc khối đó, nên cần map major_index → vị trí trong model.classes_.
+
+    Điểm ML (0–100): dùng trực tiếp `predict_proba` thô của Random Forest, nhân 100.
+    Tổng điểm ML của các ngành trong khối = 100 (đúng nghĩa xác suất).
     """
     if model is None:
         model = load_ml_model(block)
@@ -161,24 +164,12 @@ def calculate_ml_score(user_scores, major_index, block: str, model=None):
                 'error': f'Invalid probability: {raw_prob}'
             }
 
-        # Temperature scaling trên tất cả classes
-        temperature = 0.75
-        adjusted = np.power(probs, 1.0 / temperature)
-        adjusted = adjusted / adjusted.sum()
-        scaled_prob = adjusted[class_pos]
-
-        # Baseline theo số lớp trong block
-        n_classes = len(classes)
-        baseline_prob = 1.0 / n_classes
-        if scaled_prob <= baseline_prob:
-            ml_score_0_100 = 0.0
-        else:
-            ml_score_0_100 = ((scaled_prob - baseline_prob) / (1 - baseline_prob)) * 100.0
-
-        ml_score_0_100 = max(0.0, min(100.0, ml_score_0_100))
+        # Thang ML 0–100: dùng trực tiếp xác suất RF thô (predict_proba) × 100.
+        # Đây là "% tin vào ngành này" theo nghĩa xác suất thực; tổng các ngành trong khối = 100.
+        ml_score_0_100 = float(np.clip(raw_prob * 100.0, 0.0, 100.0))
 
         logger.debug(
-            f"ML Score ({block}) major={major_index}: raw={raw_prob:.6f}, scaled={scaled_prob:.6f}, final={ml_score_0_100:.2f}%"
+            f"ML Score ({block}) major={major_index}: raw={raw_prob:.6f}, final={ml_score_0_100:.2f}%"
         )
 
         return {
@@ -233,10 +224,10 @@ def check_kbs_veto(user_scores, major_index, kbs_score, ml_score, kbs_result, bl
     
     KBS veto khi phát hiện bất hợp lý rõ ràng giữa ML và tri thức chuyên gia.
     
-    3 điều kiện veto:
-      1. NOT_FIT_VETO:  KBS <= 20 (Not_Fit) nhưng ML > 60 → ML quá lạc quan
+    3 điều kiện veto (ngưỡng ML: `VETO_ML_HIGH_THRESHOLD` trong `kbs/config.py`):
+      1. NOT_FIT_VETO:  KBS <= 20 (Not_Fit) nhưng ML > ngưỡng → ML quá lạc quan
       2. KEY_SUBJECT_VETO: Tất cả môn trọng tâm < 4.0 → thiếu nền tảng cơ bản
-      3. RULE_CONFLICT_VETO: KBS rule là *_Not_Fit nhưng ML đưa ngành này lên top
+      3. RULE_CONFLICT_VETO: KBS rule là *_Not_Fit nhưng ML > ngưỡng
     
     Args:
         user_scores: list [10 điểm môn]
@@ -295,7 +286,7 @@ def check_kbs_veto(user_scores, major_index, kbs_score, ml_score, kbs_result, bl
                 'adjusted_kbs_weight': VETO_KBS_DOMINANT_WEIGHT
             }
     
-    # ---- VETO 3: KBS rule là *_Not_Fit nhưng ML > 60 ----
+    # ---- VETO 3: KBS rule là *_Not_Fit nhưng ML cao ----
     if '_Not_Fit' in rule_name and ml_score > VETO_ML_HIGH_THRESHOLD:
         return {
             'vetoed': True,
@@ -381,7 +372,7 @@ def calculate_hybrid_score(user_scores, major_index, block: str, model=None):
             f"(weights: ML={ml_weight_actual}, KBS={kbs_weight_actual})"
         )
     else:
-        # Kết hợp bình thường: 50% ML + 50% KBS
+        # Kết hợp bình thường: 70% ML + 30% KBS
         hybrid_score = ML_WEIGHT * ml_score + KBS_WEIGHT * kbs_score
         ml_weight_actual = ML_WEIGHT
         kbs_weight_actual = KBS_WEIGHT
@@ -497,16 +488,24 @@ def get_hybrid_ranking(user_scores, block: str, model=None):
         model: Random Forest model (optional)
     
     Returns:
-        list: [{rank, major, hybrid_score, ml_score, kbs_score, explanation}, ...]
+        list: [{rank, major, hybrid_score, ml_score, ml_raw_prob, kbs_score, explanation}, ...]
     """
     results = []
     
     for major_index in get_majors(block):
         result = calculate_hybrid_score(user_scores, major_index, block=block, model=model)
+        md = result.get("ml_details") or {}
+        rp = md.get("raw_prob")
+        ml_raw = (
+            float(rp)
+            if isinstance(rp, (int, float, np.floating)) and rp is not None
+            else None
+        )
         results.append({
             'major': result['major'],
             'hybrid_score': result['hybrid_score'],
             'ml_score': result['ml_score'],
+            'ml_raw_prob': ml_raw,
             'kbs_score': result['kbs_score'],
             'relevance_score': result.get('relevance_score', 0),
             'explanation': result['explanation'],

@@ -6,7 +6,8 @@ Quy trình:
   2. Đổi tên cột theo chuẩn nội bộ
   3. Lọc thí sinh KHTN (có Lý, Hóa, Sinh) và KHXH (có Sử, Địa, GDCD)
   4. Loại bỏ hàng thiếu dữ liệu ở môn bắt buộc (Toán, Văn, Anh)
-  5. Lưu data_khtn.csv và data_khxh.csv
+  5. Giữ cột nhãn nganh_hoc (chỉ ngành thuộc khối)
+  6. Lưu data_khtn.csv và data_khxh.csv
 """
 
 import logging
@@ -23,8 +24,14 @@ from kbs.config import (
     RAW_DATA_PATH, RAW_COLUMN_MAP,
     DATA_PATH_KHTN, DATA_PATH_KHXH,
     KHTN_FEATURES, KHXH_FEATURES,
-    RANDOM_STATE
+    RANDOM_STATE,
+    NGANH_HOC_MAP,
+    get_majors,
 )
+
+LABEL_COL = "nganh_hoc"
+# CSV gốc có thể dùng tên ngành (chuỗi) hoặc mã số 0–7
+NAME_TO_MAJOR_ID = {name.strip(): idx for idx, name in NGANH_HOC_MAP.items()}
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -57,10 +64,39 @@ def filter_block(df, block):
     # Lọc: phải có đủ 3 môn bắt buộc + 3 môn tự chọn
     required = ['toan', 'van', 'anh'] + block_specific
     mask = df[required].notna().all(axis=1)
-    
-    filtered = df[mask][features].copy()
+
+    out_cols = list(features)
+    if LABEL_COL in df.columns:
+        out_cols.append(LABEL_COL)
+    else:
+        logger.warning(f"  [{block.upper()}] Thiếu cột {LABEL_COL} trong dữ liệu gốc — train/eval ML sẽ lỗi")
+
+    filtered = df.loc[mask, out_cols].copy()
+
+    if LABEL_COL in filtered.columns:
+        before = len(filtered)
+        filtered = filtered[filtered[LABEL_COL].notna()].copy()
+        col = filtered[LABEL_COL]
+        if not pd.api.types.is_numeric_dtype(col):
+            filtered[LABEL_COL] = col.astype(str).str.strip().map(NAME_TO_MAJOR_ID)
+        else:
+            filtered[LABEL_COL] = pd.to_numeric(col, errors="coerce")
+        filtered = filtered[filtered[LABEL_COL].notna()].copy()
+        valid_majors = set(get_majors(block))
+        filtered = filtered[filtered[LABEL_COL].isin(valid_majors)].copy()
+        filtered[LABEL_COL] = filtered[LABEL_COL].astype(int)
+        dropped = before - len(filtered)
+        if dropped:
+            logger.info(
+                f"  [{block.upper()}] Loại {dropped:,} hàng (thiếu nhãn hoặc ngành ngoài khối {sorted(valid_majors)})"
+            )
+
     logger.info(f"  [{block.upper()}] Sau lọc: {len(filtered):,} thí sinh (từ {len(df):,})")
-    
+    if LABEL_COL in filtered.columns:
+        counts = filtered[LABEL_COL].value_counts().sort_index()
+        for major_id, count in counts.items():
+            logger.info(f"    nganh_hoc={major_id}: {count:,}")
+
     return filtered
 
 

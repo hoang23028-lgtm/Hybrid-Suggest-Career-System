@@ -13,7 +13,7 @@ Phân rõ: cái nào học từ dữ liệu, cái nào dùng tri thức chuyên 
 |-----------|---------|--------|
 | **ML (Random Forest)** | Dự đoán xác suất phù hợp từ dữ liệu | `models/rf_model_khtn.pkl` / `models/rf_model_khxh.pkl` → `predict_proba()` |
 | **KBS (JSON Rules)** | Đánh giá dựa luật, cung cấp giải thích | `rules_config.json` → conflict resolution |
-| **Hybrid Fusion** | Kết hợp 50% ML + 50% KBS | `kbs/hybrid_fusion.py` → (0.5×ML + 0.5×KBS) |
+| **Hybrid Fusion** | Kết hợp 70% ML + 30% KBS | `kbs/hybrid_fusion.py` → (0.7×ML + 0.3×KBS) |
 | **VETO Mechanism** | KBS phủ quyết ML khi phát hiện bất hợp lý | Ngưỡng trong `kbs/config.py`; logic `kbs/hybrid_fusion.check_kbs_veto`; tinh chỉnh `scripts/tune_veto.py` |
 
 ### Đánh Giá:
@@ -25,7 +25,7 @@ Phân rõ: cái nào học từ dữ liệu, cái nào dùng tri thức chuyên 
 
 ### Cần Cải Thiện
 - VETO thresholds (`kbs/config.py`: 20, 60, 4.0, 0.85) — tinh chỉnh thủ công, workshop chuyên gia, hoặc quét lưới: `python scripts/tune_veto.py --block khtn --max-samples 800`
-- Weights **50/50** cố định → có thể thử adaptive weights (chưa có trong code)
+- Weights **70/30** (tuned bằng `scripts/tune_weights.py` trên 2000 mẫu test) → có thể thử adaptive weights theo confidence (chưa có trong code)
 
 ---
 
@@ -171,8 +171,8 @@ Công thức kết hợp hợp lý, tối ưu weights.
 
 | Tiêu Chí | Chi Tiết | Đánh Giá |
 |----------|----------|----------|
-| **Công thức** | 0.5×ML + 0.5×KBS | ✅ Hợp lý |
-| **Weights** | 50/50 (mặc định codebase) | ✅ Cân bằng ML–KBS; có thể A/B so với tỷ lệ khác |
+| **Công thức** | 0.7×ML + 0.3×KBS | ✅ Hợp lý |
+| **Weights** | 70/30 (tuned bằng `scripts/tune_weights.py` trên 2000 mẫu test) | ✅ Hybrid ≈ ML thuần, KBS đóng vai trò "giảm tốc" và VETO khi mâu thuẫn |
 | **Temperature** | T=0.75 | ✅ Cải thiện calibration |
 | **VETO** | KBS phủ quyết ML | ✅ Bảo vệ outliers |
 | **Normalize** | Clip [0,100] | ✅ Đúng |
@@ -230,7 +230,7 @@ Metrics: accuracy, precision, recall, F1, user satisfaction.
 | Metric | Nguồn | Ghi chú |
 |--------|--------|---------|
 | **Accuracy / F1 / ma trận nhầm lẫn** | `scripts/train_model.py`, `scripts/evaluate_model.py` | Chạy trên từng khối sau khi có `data/data_*.csv` và `models/rf_model_*.pkl` |
-| **Hybrid vs nhãn** | `scripts/evaluate_model.py` (tùy `EVAL_MAX_SAMPLES`) | Đo mức hybrid “đồng ý” với nhãn (nếu nhãn là heuristic thì đây là mức “khớp heuristic”) |
+| **Hybrid vs nhãn** | `scripts/evaluate_model.py` (tùy `EVAL_MAX_SAMPLES`) | Đo mức hybrid đồng ý với nhãn `nganh_hoc` trên tập test |
 | **User Satisfaction** | Chưa có khảo sát | ❓ |
 
 

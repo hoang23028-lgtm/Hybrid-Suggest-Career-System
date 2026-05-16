@@ -32,7 +32,7 @@
 │           │                      │                       │
 │           └──────────┬───────────┘                       │
 │                      │                                   │
-│            Fusion: 0.5×ML + 0.5×KBS                     │
+│            Fusion: 0.7×ML + 0.3×KBS                     │
 │            = 0.5×65 + 0.5×80 = 72.5%                    │
 │                      │                                   │
 └──────────────────────┼──────────────────────────────────┘
@@ -97,19 +97,16 @@ probs = model.predict_proba(X_df)[0]
 classes = list(model.classes_)  # chỉ nhãn ngành của khối đó
 class_pos = classes.index(major_index)
 
-# Temperature T=0.75: p' ∝ p^(1/T), chuẩn hóa lại
-adjusted = np.power(probs, 1.0 / 0.75)
-adjusted = adjusted / adjusted.sum()
-scaled_prob = adjusted[class_pos]
-
-# Baseline 1/n_classes; điểm ML 0–100 cho từng ngành (major_index)
-baseline = 1.0 / len(classes)
-ml_score = 0.0 if scaled_prob <= baseline else ((scaled_prob - baseline) / (1 - baseline)) * 100.0
+# Điểm ML 0–100: dùng trực tiếp xác suất RF thô × 100 (tổng theo khối = 100)
+raw_prob = probs[class_pos]
+ml_score = float(np.clip(raw_prob * 100.0, 0.0, 100.0))
 ```
 
 **Công thức chi tiết:**
 
-$$\text{ML\_Score}_i = \text{clip}\left(\frac{\text{proba}_i - \frac{1}{n}}{\frac{n-1}{n}} \times 100, 0, 100\right)$$
+$$\text{ML\_Score}_i = \text{clip}\left(\text{proba}_i \times 100,\ 0,\ 100\right)$$
+
+với $\text{proba}_i$ là `predict_proba` thô của RF cho ngành $i$ trong khối.
 
 ### 2.3 Bước 3: KBS Branch (Knowledge Rules)
 
@@ -172,8 +169,8 @@ explanation = {
     'reasoning': {
         'ml': '35% từ ML (ví minh họa)',
         'kbs': '85% từ KBS: Sinh/Hóa/Lý tốt → Fit rule',
-        'hybrid': 'Kết hợp: 50% ML (35) + 50% KBS (85) = 60%',
-        'recommendation': 'Y khoa dẫn đầu sau fusion 50/50; Kinh tế ~58.5% gần theo sau'
+        'hybrid': 'Kết hợp: 70% ML (35) + 30% KBS (85) = 50%',
+        'recommendation': 'Y khoa dẫn đầu sau fusion 70/30; Kinh tế ~58.5% gần theo sau'
     }
 }
 ```
@@ -190,7 +187,7 @@ KBS có quyền **phủ quyết** (veto) kết quả ML khi phát hiện bất h
 # kbs/config.py (dùng trong hybrid_fusion; tune: `python scripts/tune_veto.py`)
 
 VETO_KBS_NOT_FIT_THRESHOLD = 20      # KBS ≤ 20 → "Không phù hợp"
-VETO_ML_HIGH_THRESHOLD = 60          # ML > 60 trong khi KBS ≤ 20 → bất hợp lý
+VETO_ML_HIGH_THRESHOLD = 50          # ML > 50 (thang raw_prob×100) trong khi KBS ≤ 20 → bất hợp lý
 VETO_KEY_SUBJECT_MIN = 4.0           # Môn chính < 4.0 → veto cứng
 VETO_KBS_DOMINANT_WEIGHT = 0.85      # Khi veto: 85% KBS, 15% ML
 ```
@@ -205,8 +202,8 @@ Khối: KHTN
 
 ML có thể vẫn cho xác suất cao ở một số ngành; KBS có thể trả Not_Fit (điểm thấp).
 
-→ Nếu KBS ≤ 20, ML > 60 và có môn trọng tâm < 4.0 → VETO kích hoạt
-→ Hybrid ≈ 0.15 × ML + 0.85 × KBS (thay vì 50/50 khi không veto)
+→ Nếu KBS ≤ 20, ML > 50 và có môn trọng tâm < 4.0 → VETO kích hoạt
+→ Hybrid ≈ 0.15 × ML + 0.85 × KBS (thay vì 70/30 khi không veto)
 ```
 
 ---

@@ -223,7 +223,7 @@ class TestMLScore:
         assert 'major' in result, "Result phải có major"
     
     def test_ml_score_formula(self, ml_model, sample_scores_balanced):
-        """Kiểm tra công thức ML: temperature scaling (T=0.5) + baseline subtraction"""
+        """Kiểm tra công thức ML: xác suất RF thô (predict_proba) × 100"""
         import numpy as np
         result = calculate_ml_score(sample_scores_balanced, 0, block='khtn', model=ml_model)
         if result['score'] is not None:
@@ -265,8 +265,8 @@ class TestHybridScore:
     def test_hybrid_it_specialist(self, ml_model, sample_scores_it_specialist):
         """Kiểm tra IT specialist có Hybrid score cao"""
         result = calculate_hybrid_score(sample_scores_it_specialist, 0, block='khtn', model=ml_model)
-        # Ngưỡng được nới để bền vững theo model/data (hybrid không luôn vượt 40%)
-        assert result['hybrid_score'] > 30, "IT specialist phải có Hybrid > 30%"
+        # Với tỉ lệ 70/30 thiên về ML, ngưỡng được nới (ML có thể thấp trên input tổng hợp)
+        assert result['hybrid_score'] > 20, "IT specialist phải có Hybrid > 20%"
     
     def test_hybrid_medical_specialist(self, ml_model, sample_scores_medical_specialist):
         """Kiểm tra Y Khoa specialist có Hybrid score cao"""

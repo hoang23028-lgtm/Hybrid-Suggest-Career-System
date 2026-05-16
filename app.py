@@ -243,23 +243,32 @@ elif st.session_state.page == "analyze":
             st.error("Lỗi: Không thể tải mô hình ML. Vui lòng chạy train_model.py trước!")
             st.stop()
         
-        # Lấy xếp hạng tất cả ngành và tìm ngành phù hợp nhất
+        # Lấy xếp hạng tất cả ngành và lấy top 4 ngành phù hợp nhất
         all_rankings = get_hybrid_ranking(user_scores, block=block, model=model)
-        best_major = all_rankings[0]
-        
+        top_majors = all_rankings[:4]  # KHTN: 4/5, KHXH: 4/4
+        best_major = top_majors[0]
+
         score = best_major['hybrid_score']
         explanation = best_major['explanation']
         ml_score = best_major['ml_score']
         major_name = best_major['major']
-        
+
+        def _level(s: float) -> str:
+            return "Rất phù hợp" if s >= 75 else "Khá phù hợp" if s >= 50 else "Không phù hợp"
+
+        def _fmt_ml_cell(m: dict) -> str:
+            """ml_score = xác suất RF thô × 100."""
+            ms = m.get("ml_score")
+            return "N/A" if ms is None else f"{ms:.1f}%"
+
         tab1, tab2 = st.tabs(["Kết quả chính", "Phân tích chi tiết"])
-        
+
         with tab1:
             st.header("Kết quả Phân Tích")
-            
+
             if score is not None:
-                # "Top pick" card
-                level = "Rất phù hợp" if score >= 75 else "Khá phù hợp" if score >= 50 else "Không phù hợp"
+                # "Top pick" card (ngành #1)
+                level = _level(score)
                 st.markdown(
                     f"""
                     <div class="metric-card">
@@ -273,36 +282,84 @@ elif st.session_state.page == "analyze":
                 )
                 st.divider()
 
-                # Hiển thị các metrics chính (reuse best_major từ all_rankings)
+                # Hiển thị các metrics chính cho ngành top-1
                 col1, col2, col3, col4, col5 = st.columns(5)
-                
                 with col1:
                     st.metric("Ngành được chọn", major_name)
-                
                 with col2:
                     color_hybrid = "Good" if score >= 75 else "Fair" if score >= 50 else "Low"
-                    st.metric("Hybrid Score", f"{score:.1f}%", delta=color_hybrid)
-                
+                    st.metric(
+                        "Hybrid Score",
+                        f"{score:.1f}%",
+                        delta=color_hybrid,
+                        delta_color="off",
+                    )
                 with col3:
                     ml_score_display = f"{ml_score:.1f}%" if ml_score is not None else "N/A"
                     st.metric("ML Score", ml_score_display)
-                
                 with col4:
                     st.metric("KBS Score", f"{best_major['kbs_score']:.1f}%")
-                
                 with col5:
                     st.metric("Mức độ khuyến nghị", level)
-                
                 st.divider()
-                
-                # Giải thích chi tiết
-                st.subheader("Giải thích chi tiết")
+
+                # === TOP 4 ngành phù hợp nhất ===
+                st.subheader(f"Top {len(top_majors)} ngành phù hợp nhất")
+                summary_df = pd.DataFrame(
+                    [
+                        {
+                            "Hạng": f"#{i + 1}",
+                            "Ngành": m["major"],
+                            "Hybrid": f"{m['hybrid_score']:.1f}%",
+                            "ML": _fmt_ml_cell(m),
+                            "KBS": f"{m['kbs_score']:.1f}%",
+                            "Mức độ": _level(m["hybrid_score"]),
+                        }
+                        for i, m in enumerate(top_majors)
+                    ]
+                )
+                st.dataframe(summary_df, use_container_width=True, hide_index=True)
+                st.caption(
+                    "Cột **ML**: xác suất RF thô (`predict_proba`) × 100 — tổng các ngành trong khối = 100%."
+                )
+
+                st.divider()
+
+                # Giải thích chi tiết cho ngành #1
+                st.subheader("Giải thích chi tiết — Ngành #1")
                 st.info(explanation)
                 rc = best_major.get("reasoning_chain") or []
                 if rc:
                     st.markdown("**Chuỗi suy luận KBS (theo ngành đề xuất)**")
                     for step in rc:
                         st.markdown(f"- {step}")
+
+                # Giải thích cho ngành #2 đến #4 (ẩn trong expander)
+                if len(top_majors) > 1:
+                    st.markdown("##### Giải thích các ngành xếp sau")
+                    for i, m in enumerate(top_majors[1:], start=2):
+                        with st.expander(
+                            f"#{i} — {m['major']} • Hybrid {m['hybrid_score']:.1f}% • "
+                            f"{_level(m['hybrid_score'])}"
+                        ):
+                            cA, cB, cC = st.columns(3)
+                            with cA:
+                                st.metric("Hybrid", f"{m['hybrid_score']:.1f}%")
+                            with cB:
+                                st.metric(
+                                    "ML",
+                                    f"{m['ml_score']:.1f}%"
+                                    if m.get("ml_score") is not None
+                                    else "N/A",
+                                )
+                            with cC:
+                                st.metric("KBS", f"{m['kbs_score']:.1f}%")
+                            st.info(m.get("explanation", ""))
+                            rc_i = m.get("reasoning_chain") or []
+                            if rc_i:
+                                st.markdown("**Chuỗi suy luận KBS**")
+                                for step in rc_i:
+                                    st.markdown(f"- {step}")
             else:
                 st.error("Có lỗi xảy ra trong quá trình phân tích. Vui lòng thử lại!")
         

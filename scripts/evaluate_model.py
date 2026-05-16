@@ -5,6 +5,7 @@
 
 import os
 import sys
+import logging
 from pathlib import Path
 import pandas as pd
 import numpy as np
@@ -17,7 +18,30 @@ from sklearn.metrics import (
     classification_report,
     confusion_matrix,
 )
-import logging
+
+
+def _multiclass_prf(y_true, y_pred, *, labels=None):
+    """
+    Precision / recall / F1 cho phân loại đa lớp.
+
+    - macro: trung bình không trọng số theo lớp (đang dùng làm chỉ số chính trong DB/pipeline).
+    - weighted: trung bình có trọng số theo support (phản ánh tổng thể khi lớp lệch).
+    """
+    kw = {"average": "macro", "zero_division": 0}
+    kw_w = {"average": "weighted", "zero_division": 0}
+    if labels is not None:
+        kw["labels"] = labels
+        kw_w["labels"] = labels
+    return {
+        "precision": float(precision_score(y_true, y_pred, **kw)),
+        "recall": float(recall_score(y_true, y_pred, **kw)),
+        "f1": float(f1_score(y_true, y_pred, **kw)),
+        "precision_weighted": float(precision_score(y_true, y_pred, **kw_w)),
+        "recall_weighted": float(recall_score(y_true, y_pred, **kw_w)),
+        "f1_weighted": float(f1_score(y_true, y_pred, **kw_w)),
+    }
+
+
 REPO_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
@@ -49,17 +73,29 @@ def evaluate_ml_only(block, model, X_test, y_test):
 
     # Metrics
     accuracy = accuracy_score(y_test, y_pred)
-    precision_macro = precision_score(y_test, y_pred, average='macro', zero_division=0)
-    recall_macro = recall_score(y_test, y_pred, average='macro', zero_division=0)
-    f1_macro = f1_score(y_test, y_pred, average='macro', zero_division=0)
+    labels = sorted([int(v) for v in pd.unique(y_test)])
+    prf = _multiclass_prf(y_test, y_pred, labels=labels)
+    precision_macro = prf["precision"]
+    recall_macro = prf["recall"]
+    f1_macro = prf["f1"]
 
     logger.info("\n Kết quả tổng hợp:")
     logger.info(f"   Accuracy:  {accuracy:.4f} ({accuracy*100:.2f}%)")
-    logger.info(f"   Precision: {precision_macro:.4f} ({precision_macro*100:.2f}%)")
-    logger.info(f"   Recall:    {recall_macro:.4f} ({recall_macro*100:.2f}%)")
-    logger.info(f"   F1 Score:  {f1_macro:.4f}")
+    logger.info(
+        f"   Precision (macro):    {precision_macro:.4f} ({precision_macro*100:.2f}%)"
+    )
+    logger.info(f"   Recall (macro):       {recall_macro:.4f} ({recall_macro*100:.2f}%)")
+    logger.info(f"   F1 (macro):             {f1_macro:.4f}")
+    logger.info(
+        f"   Precision (weighted): {prf['precision_weighted']:.4f} "
+        f"({prf['precision_weighted']*100:.2f}%)"
+    )
+    logger.info(
+        f"   Recall (weighted):    {prf['recall_weighted']:.4f} "
+        f"({prf['recall_weighted']*100:.2f}%)"
+    )
+    logger.info(f"   F1 (weighted):          {prf['f1_weighted']:.4f}")
 
-    labels = sorted([int(v) for v in pd.unique(y_test)])
     target_names = [NGANH_HOC_MAP[int(i)] for i in labels]
 
     logger.info("\n📈 Chi tiết theo ngành:")
@@ -80,6 +116,9 @@ def evaluate_ml_only(block, model, X_test, y_test):
         'precision': precision_macro,
         'recall': recall_macro,
         'f1': f1_macro,
+        'precision_weighted': prf['precision_weighted'],
+        'recall_weighted': prf['recall_weighted'],
+        'f1_weighted': prf['f1_weighted'],
         'y_pred': y_pred,
         'report': report,
         'labels': labels,
@@ -124,6 +163,9 @@ def evaluate_block(block: str, *, max_samples: int | None = None) -> dict:
             "precision": float(ml_results["precision"]),
             "recall": float(ml_results["recall"]),
             "f1": float(ml_results["f1"]),
+            "precision_weighted": float(ml_results["precision_weighted"]),
+            "recall_weighted": float(ml_results["recall_weighted"]),
+            "f1_weighted": float(ml_results["f1_weighted"]),
             "report": ml_results.get("report"),
             "confusion_matrix": ml_results.get("confusion_matrix"),
         },
@@ -132,6 +174,9 @@ def evaluate_block(block: str, *, max_samples: int | None = None) -> dict:
             "precision": float(hybrid_results["precision"]),
             "recall": float(hybrid_results["recall"]),
             "f1": float(hybrid_results["f1"]),
+            "precision_weighted": float(hybrid_results["precision_weighted"]),
+            "recall_weighted": float(hybrid_results["recall_weighted"]),
+            "f1_weighted": float(hybrid_results["f1_weighted"]),
             "avg_hybrid_score": float(np.mean(hybrid_results["hybrid_scores"])) if hybrid_results.get("hybrid_scores") else None,
             "report": hybrid_results.get("report"),
             "confusion_matrix": hybrid_results.get("confusion_matrix"),
@@ -183,18 +228,30 @@ def evaluate_hybrid_system(block, model, X_test, y_test, max_samples=None):
 
     # Metrics
     accuracy = accuracy_score(y_iter, y_pred_hybrid)
-    precision_macro = precision_score(y_iter, y_pred_hybrid, average='macro', zero_division=0)
-    recall_macro = recall_score(y_iter, y_pred_hybrid, average='macro', zero_division=0)
-    f1_macro = f1_score(y_iter, y_pred_hybrid, average='macro', zero_division=0)
+    labels = sorted([int(v) for v in pd.unique(y_iter)])
+    prf = _multiclass_prf(y_iter, y_pred_hybrid, labels=labels)
+    precision_macro = prf["precision"]
+    recall_macro = prf["recall"]
+    f1_macro = prf["f1"]
 
     logger.info("\n📊 Kết quả tổng hợp:")
     logger.info(f"   Accuracy:  {accuracy:.4f} ({accuracy*100:.2f}%)")
-    logger.info(f"   Precision: {precision_macro:.4f} ({precision_macro*100:.2f}%)")
-    logger.info(f"   Recall:    {recall_macro:.4f} ({recall_macro*100:.2f}%)")
-    logger.info(f"   F1 Score:  {f1_macro:.4f}")
+    logger.info(
+        f"   Precision (macro):    {precision_macro:.4f} ({precision_macro*100:.2f}%)"
+    )
+    logger.info(f"   Recall (macro):       {recall_macro:.4f} ({recall_macro*100:.2f}%)")
+    logger.info(f"   F1 (macro):             {f1_macro:.4f}")
+    logger.info(
+        f"   Precision (weighted): {prf['precision_weighted']:.4f} "
+        f"({prf['precision_weighted']*100:.2f}%)"
+    )
+    logger.info(
+        f"   Recall (weighted):    {prf['recall_weighted']:.4f} "
+        f"({prf['recall_weighted']*100:.2f}%)"
+    )
+    logger.info(f"   F1 (weighted):          {prf['f1_weighted']:.4f}")
     logger.info(f"   Avg Hybrid Score: {np.mean(hybrid_scores):.2f}%")
 
-    labels = sorted([int(v) for v in pd.unique(y_iter)])
     target_names = [NGANH_HOC_MAP[int(i)] for i in labels]
     logger.info("\n Chi tiết theo ngành:")
     report = classification_report(
@@ -214,6 +271,9 @@ def evaluate_hybrid_system(block, model, X_test, y_test, max_samples=None):
         'precision': precision_macro,
         'recall': recall_macro,
         'f1': f1_macro,
+        'precision_weighted': prf['precision_weighted'],
+        'recall_weighted': prf['recall_weighted'],
+        'f1_weighted': prf['f1_weighted'],
         'y_pred': y_pred_hybrid,
         'hybrid_scores': hybrid_scores,
         'report': report,
@@ -223,23 +283,38 @@ def evaluate_hybrid_system(block, model, X_test, y_test, max_samples=None):
 
 
 def print_classification_report(report, major_names, labels=None):
-    """In classification report theo ngành"""
+    """In classification report theo ngành.
+
+    sklearn `classification_report(..., output_dict=True)` dùng `target_names`
+    làm key cho từng lớp (không phải chỉ số dạng chuỗi), nên lookup theo tên ngành.
+    """
     logger.info(f"{'Ngành':25} {'Precision':12} {'Recall':12} {'F1-Score':12} {'Support':10}")
     logger.info("-" * 70)
     if labels is None:
         for idx, major in enumerate(major_names):
-            if str(idx) in report:
+            metrics = None
+            if major in report:
+                metrics = report[major]
+            elif str(idx) in report:
                 metrics = report[str(idx)]
+            if metrics is not None:
                 logger.info(
-                    f"{major[:25]:25} {metrics['precision']:12.4f} {metrics['recall']:12.4f} {metrics['f1-score']:12.4f} {int(metrics['support']):10}"
+                    f"{major[:25]:25} {metrics['precision']:12.4f} {metrics['recall']:12.4f} "
+                    f"{metrics['f1-score']:12.4f} {int(metrics['support']):10}"
                 )
     else:
         for label, major in zip(labels, major_names):
-            key = str(label)
-            if key in report:
-                metrics = report[key]
+            metrics = None
+            if major in report:
+                metrics = report[major]
+            elif str(label) in report:
+                metrics = report[str(label)]
+            elif label in report:
+                metrics = report[label]
+            if metrics is not None:
                 logger.info(
-                    f"{major[:25]:25} {metrics['precision']:12.4f} {metrics['recall']:12.4f} {metrics['f1-score']:12.4f} {int(metrics['support']):10}"
+                    f"{major[:25]:25} {metrics['precision']:12.4f} {metrics['recall']:12.4f} "
+                    f"{metrics['f1-score']:12.4f} {int(metrics['support']):10}"
                 )
 
 
@@ -252,7 +327,15 @@ def compare_ml_vs_hybrid(ml_results, hybrid_results):
     logger.info(f"\n{'Metric':20} {'ML':15} {'Hybrid':15} {'Thay Đổi':15}")
     logger.info("-" * 70)
     
-    metrics = ['accuracy', 'precision', 'recall', 'f1']
+    metrics = [
+        'accuracy',
+        'precision',
+        'recall',
+        'f1',
+        'precision_weighted',
+        'recall_weighted',
+        'f1_weighted',
+    ]
     improvements = {}
     
     for metric in metrics:
@@ -264,12 +347,14 @@ def compare_ml_vs_hybrid(ml_results, hybrid_results):
         improvements[metric] = {'change': change, 'pct': improvement_pct}
         
         symbol = "📈" if change > 0 else "📉" if change < 0 else "="
-        logger.info(f"{metric.upper():20} {ml_val:14.4f} {hybrid_val:14.4f} {symbol} {improvement_pct:+.2f}%")
+        label = metric.upper().replace('_', ' ')
+        logger.info(f"{label:20} {ml_val:14.4f} {hybrid_val:14.4f} {symbol} {improvement_pct:+.2f}%")
     
     logger.info("-" * 70)
     
-    avg_improvement = np.mean([v['pct'] for v in improvements.values()])
-    logger.info(f"\n🎯 Cải thiện trung bình: {avg_improvement:+.2f}%")
+    core_metrics = ("accuracy", "precision", "recall", "f1")
+    avg_improvement = np.mean([improvements[m]["pct"] for m in core_metrics])
+    logger.info(f"\n🎯 Cải thiện trung bình (accuracy + macro P/R/F1): {avg_improvement:+.2f}%")
     
     if avg_improvement > 0:
         logger.info(" Hybrid System cải thiện hiệu suất so với ML thuần!")
@@ -319,7 +404,7 @@ def main():
             logger.info("=" * 80)
 
             logger.info("📖 Đang load dữ liệu...")
-            df = pd.read_csv(get_data_path(block))
+            df = pd.read_csv(str(REPO_ROOT / get_data_path(block)))
             logger.info(f"✓ Load thành công: {len(df):,} samples")
 
             features = get_features(block)
