@@ -388,6 +388,19 @@ class KnowledgeRuleEngine:
             })
         return ranking
 
+    def predict_major_index(self, user_scores):
+        
+        
+        best_index = self.major_indices[0]
+        best_score = (-1.0, -1.0)
+        for major_index in self.major_indices:
+            result = self.evaluate(user_scores, major_index)
+            key = (float(result['score']), float(result.get('relevance_score', 0)))
+            if key > best_score:
+                best_score = key
+                best_index = major_index
+        return best_index
+
     def print_ranking(self, user_scores):
         """In kết quả xếp hạng"""
         display = get_features(self.block)

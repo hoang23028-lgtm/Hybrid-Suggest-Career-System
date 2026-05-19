@@ -8,10 +8,13 @@ __pycache__/
 .idea/
 .vscode/
 
-# Ignore data and model files that are generated
+# Ignore local/generated artifacts
 data_tuyensinh.csv
 rf_model.pkl
 app.log
-
-# Ignore extracted rule review outputs (generated)
 extracted_rules*/
+extracted_rules_demo1/
+model_backups/
+.pytest_cache/
+model_metrics.db
+

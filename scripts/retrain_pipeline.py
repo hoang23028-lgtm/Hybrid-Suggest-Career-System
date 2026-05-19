@@ -74,12 +74,6 @@ def run_pipeline(
     skip_data: bool,
     skip_train: bool,
     skip_eval: bool,
-    extract_rules: bool,
-    rules_top_k_total: int,
-    rules_top_k_per_class: int,
-    rules_min_conf: float,
-    rules_min_samples: int,
-    out_dir: str,
 ):
     run_id = new_run_id("retrain")
     timestamp = _utc_now_iso()
@@ -89,7 +83,7 @@ def run_pipeline(
     code_git_sha = _try_git_sha(repo_dir)
 
     logger.info("=" * 80)
-    logger.info("RETRAIN PIPELINE v3 (data -> train -> eval -> metrics_db)")
+    logger.info("RETRAIN PIPELINE v3 (train -> eval -> metrics_db; data tùy chọn)")
     logger.info("=" * 80)
     logger.info(f"run_id={run_id}")
     logger.info(f"blocks={blocks} eval_max_samples={eval_max_samples}")
@@ -226,71 +220,40 @@ def run_pipeline(
     finally:
         con.close()
 
-    if extract_rules:
-        logger.info("\n[extra] rule extraction")
-        import subprocess
-        import sys
-
-        out_path = Path(out_dir)
-        out_path.mkdir(parents=True, exist_ok=True)
-
-        for b in blocks:
-            cmd = [
-                sys.executable,
-                str(Path(__file__).parent / "rule_extraction.py"),
-                "--block",
-                b,
-                "--out-dir",
-                out_dir,
-                "--min-confidence",
-                str(rules_min_conf),
-                "--min-samples",
-                str(rules_min_samples),
-                "--top-k-total",
-                str(rules_top_k_total),
-                "--top-k-per-class",
-                str(rules_top_k_per_class),
-            ]
-            logger.info(" ".join(cmd))
-            subprocess.check_call(cmd)
-
     logger.info("\nDONE.")
     logger.info(f"- run_id: {run_id}")
     logger.info("- metrics stored in: model_metrics.db (table: metrics)")
-    if extract_rules:
-        logger.info(f"- extracted rules in: {out_dir}/")
 
 
 def main():
     parser = argparse.ArgumentParser(description="Retrain pipeline v3 (step 7).")
     parser.add_argument("--blocks", nargs="+", default=["khtn", "khxh"], choices=["khtn", "khxh"])
     parser.add_argument("--eval-max-samples", type=int, default=0, help="Giới hạn số mẫu khi eval hybrid (0=all)")
-    parser.add_argument("--skip-data", action="store_true")
+    parser.add_argument(
+        "--create-data",
+        action="store_true",
+        help="Chạy create_data.py trước train (mặc định: bỏ qua, dùng data/data_*.csv hiện có)",
+    )
+    parser.add_argument(
+        "--skip-data",
+        action="store_true",
+        help="(mặc định đã bỏ qua create_data; chỉ giữ để tương thích script cũ)",
+    )
     parser.add_argument("--skip-train", action="store_true")
     parser.add_argument("--skip-eval", action="store_true")
-
-    parser.add_argument("--extract-rules", action="store_true", help="Chạy rule_extraction sau pipeline")
-    parser.add_argument("--rules-top-k-total", type=int, default=50)
-    parser.add_argument("--rules-top-k-per-class", type=int, default=10)
-    parser.add_argument("--rules-min-confidence", type=float, default=0.6)
-    parser.add_argument("--rules-min-samples", type=int, default=50)
-    parser.add_argument("--rules-out-dir", default="extracted_rules")
 
     args = parser.parse_args()
     eval_max = args.eval_max_samples if args.eval_max_samples and args.eval_max_samples > 0 else None
 
+    # Mặc định không chạy create_data; chỉ bật khi --create-data
+    skip_data = not args.create_data
+
     run_pipeline(
         blocks=args.blocks,
         eval_max_samples=eval_max,
-        skip_data=args.skip_data,
+        skip_data=skip_data,
         skip_train=args.skip_train,
         skip_eval=args.skip_eval,
-        extract_rules=args.extract_rules,
-        rules_top_k_total=args.rules_top_k_total,
-        rules_top_k_per_class=args.rules_top_k_per_class,
-        rules_min_conf=args.rules_min_confidence,
-        rules_min_samples=args.rules_min_samples,
-        out_dir=args.rules_out_dir,
     )
 
 

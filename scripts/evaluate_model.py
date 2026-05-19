@@ -10,41 +10,12 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import (
-    accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score,
-    classification_report,
-    confusion_matrix,
-)
-
-
-def _multiclass_prf(y_true, y_pred, *, labels=None):
-    """
-    Precision / recall / F1 cho phân loại đa lớp.
-
-    - macro: trung bình không trọng số theo lớp (đang dùng làm chỉ số chính trong DB/pipeline).
-    - weighted: trung bình có trọng số theo support (phản ánh tổng thể khi lớp lệch).
-    """
-    kw = {"average": "macro", "zero_division": 0}
-    kw_w = {"average": "weighted", "zero_division": 0}
-    if labels is not None:
-        kw["labels"] = labels
-        kw_w["labels"] = labels
-    return {
-        "precision": float(precision_score(y_true, y_pred, **kw)),
-        "recall": float(recall_score(y_true, y_pred, **kw)),
-        "f1": float(f1_score(y_true, y_pred, **kw)),
-        "precision_weighted": float(precision_score(y_true, y_pred, **kw_w)),
-        "recall_weighted": float(recall_score(y_true, y_pred, **kw_w)),
-        "f1_weighted": float(f1_score(y_true, y_pred, **kw_w)),
-    }
-
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 
 REPO_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
+from kbs.classification_metrics import multiclass_prf
 from kbs.config import (
     TEST_SIZE,
     RANDOM_STATE,
@@ -74,7 +45,7 @@ def evaluate_ml_only(block, model, X_test, y_test):
     # Metrics
     accuracy = accuracy_score(y_test, y_pred)
     labels = sorted([int(v) for v in pd.unique(y_test)])
-    prf = _multiclass_prf(y_test, y_pred, labels=labels)
+    prf = multiclass_prf(y_test, y_pred, labels=labels)
     precision_macro = prf["precision"]
     recall_macro = prf["recall"]
     f1_macro = prf["f1"]
@@ -229,7 +200,7 @@ def evaluate_hybrid_system(block, model, X_test, y_test, max_samples=None):
     # Metrics
     accuracy = accuracy_score(y_iter, y_pred_hybrid)
     labels = sorted([int(v) for v in pd.unique(y_iter)])
-    prf = _multiclass_prf(y_iter, y_pred_hybrid, labels=labels)
+    prf = multiclass_prf(y_iter, y_pred_hybrid, labels=labels)
     precision_macro = prf["precision"]
     recall_macro = prf["recall"]
     f1_macro = prf["f1"]

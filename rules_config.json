@@ -392,7 +392,8 @@
     "default_score": 10,
     "max_score": 100,
     "weights": {
-        "ml_weight": 0.5,
-        "kbs_weight": 0.5
+        "ml_weight": 0.7,
+        "kbs_weight": 0.3,
+        "_note": "Tham chiếu tài liệu; fusion thực tế dùng ML_WEIGHT/KBS_WEIGHT trong kbs/hybrid_fusion.py"
     }
 }

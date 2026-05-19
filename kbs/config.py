@@ -18,7 +18,7 @@ MODEL_PATH_KHXH = f"{MODELS_DIR}/rf_model_khxh.pkl"
 RANDOM_STATE = 42
 TEST_SIZE = 0.2  # 80/20 split
 
-# Random Forest hyperparameters
+# Random Forest hyperparameters (mặc định KHTN)
 RF_PARAMS = {
     'n_estimators': 100,
     'max_depth': 15,
@@ -27,6 +27,24 @@ RF_PARAMS = {
     'random_state': RANDOM_STATE,
     'n_jobs': -1,
 }
+
+# KHXH: lớp Luật chiếm ~78% — giảm overfit / lệch lớp (accuracy test thực tế hơn)
+RF_PARAMS_KHXH = {
+    **RF_PARAMS,
+    'max_depth': 10,
+    'min_samples_leaf': 15,
+    'class_weight': 'balanced_subsample',
+}
+
+# Khối nào undersample tập train (theo min count mỗi lớp) trước khi fit
+BALANCE_TRAIN_BLOCKS = frozenset({'khxh'})
+
+
+def get_rf_params(block: str) -> dict:
+    """Tham số RF theo khối."""
+    if block == 'khxh':
+        return dict(RF_PARAMS_KHXH)
+    return dict(RF_PARAMS)
 
 # ============================================================================
 # DỮ LIỆU

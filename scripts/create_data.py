@@ -1,177 +1,162 @@
 """
-Tiền xử lý dữ liệu THPT 2024 → 2 bộ dữ liệu (KHTN + KHXH)
+Tiền xử lý dữ liệu THPT 2024 → data_khtn.csv / data_khxh.csv
 
-Quy trình:
-  1. Đọc dữ liệu gốc diem_thi_thpt_2024.csv (~1M thí sinh)
-  2. Đổi tên cột theo chuẩn nội bộ
-  3. Lọc thí sinh KHTN (có Lý, Hóa, Sinh) và KHXH (có Sử, Địa, GDCD)
-  4. Loại bỏ hàng thiếu dữ liệu ở môn bắt buộc (Toán, Văn, Anh)
-  5. Giữ cột nhãn nganh_hoc (chỉ ngành thuộc khối)
-  6. Lưu data_khtn.csv và data_khxh.csv
+1. Đọc diem_thi_thpt_2024.csv
+2. Đổi tên cột
+3. Lọc đủ 6 môn theo khối
+4. Ghi cột nganh_hoc (ngành mục tiêu theo khối)
+5. Lưu file train
+
+Usage:
+  python scripts/create_data.py
 """
 
 import logging
+import os
 import sys
 from pathlib import Path
-import pandas as pd
-import numpy as np
 
+import pandas as pd
 
 REPO_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
 from kbs.config import (
-    RAW_DATA_PATH, RAW_COLUMN_MAP,
-    DATA_PATH_KHTN, DATA_PATH_KHXH,
-    KHTN_FEATURES, KHXH_FEATURES,
-    RANDOM_STATE,
+    RAW_DATA_PATH,
+    RAW_COLUMN_MAP,
+    DATA_PATH_KHTN,
+    DATA_PATH_KHXH,
+    KHTN_FEATURES,
+    KHXH_FEATURES,
     NGANH_HOC_MAP,
+    get_features,
     get_majors,
 )
+from kbs.label_assignment import assign_major_labels, label_distribution, mask_complete_block
+from kbs.external_labels import map_raw_label_series
 
 LABEL_COL = "nganh_hoc"
-# CSV gốc có thể dùng tên ngành (chuỗi) hoặc mã số 0–7
-NAME_TO_MAJOR_ID = {name.strip(): idx for idx, name in NGANH_HOC_MAP.items()}
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
-# ============================================================================
-# XỬ LÝ CHÍNH
-# ============================================================================
 def load_and_rename(path):
-    """Đọc CSV gốc và đổi tên cột"""
+    """Đọc CSV gốc và đổi tên cột."""
     logger.info(f"Đọc dữ liệu gốc: {path}")
     df = pd.read_csv(path)
     logger.info(f"  Tổng số hàng: {len(df):,}")
-    logger.info(f"  Cột: {list(df.columns)}")
-    
-    # Đổi tên cột
-    df = df.rename(columns=RAW_COLUMN_MAP)
-    return df
+    return df.rename(columns=RAW_COLUMN_MAP)
 
 
-def filter_block(df, block):
-    """Lọc thí sinh theo khối thi"""
-    if block == 'khtn':
-        features = KHTN_FEATURES
-        block_specific = ['ly', 'hoa', 'sinh']
-    else:
-        features = KHXH_FEATURES
-        block_specific = ['lich_su', 'dia_ly', 'gdcd']
-    
-    # Lọc: phải có đủ 3 môn bắt buộc + 3 môn tự chọn
-    required = ['toan', 'van', 'anh'] + block_specific
-    mask = df[required].notna().all(axis=1)
+def _log_label_distribution(filtered: pd.DataFrame, block: str) -> None:
+    dist = label_distribution(filtered[LABEL_COL], block)
+    for major_id, count in sorted(dist.items()):
+        name = NGANH_HOC_MAP.get(major_id, "?")
+        logger.info(f"    nganh_hoc={major_id} ({name}): {count:,}")
+    missing = set(get_majors(block)) - set(dist.keys())
+    if missing:
+        logger.warning(
+            f"  [{block.upper()}] Không có mẫu cho ngành: {sorted(missing)}"
+        )
 
-    out_cols = list(features)
-    if LABEL_COL in df.columns:
-        out_cols.append(LABEL_COL)
-    else:
-        logger.warning(f"  [{block.upper()}] Thiếu cột {LABEL_COL} trong dữ liệu gốc — train/eval ML sẽ lỗi")
 
-    filtered = df.loc[mask, out_cols].copy()
+def filter_and_label_block(df: pd.DataFrame, block: str, label_source: str = "kbs") -> pd.DataFrame:
+    """Lọc theo khối và ghi cột nganh_hoc."""
+    if label_source not in ("raw", "kbs"):
+        raise ValueError(f"label_source không hợp lệ: {label_source}")
 
-    if LABEL_COL in filtered.columns:
-        before = len(filtered)
-        filtered = filtered[filtered[LABEL_COL].notna()].copy()
-        col = filtered[LABEL_COL]
-        if not pd.api.types.is_numeric_dtype(col):
-            filtered[LABEL_COL] = col.astype(str).str.strip().map(NAME_TO_MAJOR_ID)
-        else:
-            filtered[LABEL_COL] = pd.to_numeric(col, errors="coerce")
-        filtered = filtered[filtered[LABEL_COL].notna()].copy()
-        valid_majors = set(get_majors(block))
-        filtered = filtered[filtered[LABEL_COL].isin(valid_majors)].copy()
-        filtered[LABEL_COL] = filtered[LABEL_COL].astype(int)
-        dropped = before - len(filtered)
+    features = get_features(block)
+    mask = mask_complete_block(df, block)
+    n_block = int(mask.sum())
+    logger.info(f"  [{block.upper()}] Có đủ 6 môn khối: {n_block:,} / {len(df):,}")
+
+    if label_source == "raw":
+        if LABEL_COL not in df.columns:
+            raise ValueError(f"Thiếu cột {LABEL_COL} trong CSV gốc")
+        out = df.loc[mask, features].copy()
+        raw_mapped = map_raw_label_series(df.loc[mask, LABEL_COL], block)
+        before = len(out)
+        out[LABEL_COL] = raw_mapped
+        out = out[out[LABEL_COL].notna()].copy()
+        out[LABEL_COL] = out[LABEL_COL].astype(int)
+        dropped = before - len(out)
         if dropped:
             logger.info(
-                f"  [{block.upper()}] Loại {dropped:,} hàng (thiếu nhãn hoặc ngành ngoài khối {sorted(valid_majors)})"
+                f"  [{block.upper()}] Loại {dropped:,} hàng (mã ngành trống / ngoài khối)"
             )
+        logger.info(f"  [{block.upper()}] Hoàn tất: {len(out):,} mẫu")
+        _log_label_distribution(out, block)
+        return out
 
-    logger.info(f"  [{block.upper()}] Sau lọc: {len(filtered):,} thí sinh (từ {len(df):,})")
-    if LABEL_COL in filtered.columns:
-        counts = filtered[LABEL_COL].value_counts().sort_index()
-        for major_id, count in counts.items():
-            logger.info(f"    nganh_hoc={major_id}: {count:,}")
+    filtered = df.loc[mask, features].copy()
+    if filtered.empty:
+        filtered[LABEL_COL] = pd.Series(dtype=int)
+        return filtered
 
+    logger.info(f"  [{block.upper()}] Ánh xạ cột nganh_hoc...")
+    filtered[LABEL_COL] = assign_major_labels(filtered, block)
+    _log_label_distribution(filtered, block)
     return filtered
 
 
-def balance_data(df, label_col='nganh_hoc', valid_majors=None, seed=42):
-    """Cân bằng dữ liệu bằng undersampling"""
+def balance_data(df, label_col="nganh_hoc", valid_majors=None, seed=42):
+    """Cân bằng dữ liệu bằng undersampling (tuỳ chọn, không gọi trong main)."""
     if valid_majors:
         df = df[df[label_col].isin(valid_majors)].copy()
-    
     counts = df[label_col].value_counts()
-    logger.info(f"  Phân bố trước cân bằng:")
-    for major, count in counts.items():
-        logger.info(f"    Ngành {major}: {count:,}")
-    
     min_count = counts.min()
-    logger.info(f"  Cân bằng về: {min_count:,} mẫu/ngành")
-    
     balanced_parts = []
     for major in valid_majors:
         major_df = df[df[label_col] == major]
         if len(major_df) >= min_count:
             balanced_parts.append(major_df.sample(n=min_count, random_state=seed))
         else:
-            # Nếu thiếu: oversample
             balanced_parts.append(major_df.sample(n=min_count, random_state=seed, replace=True))
-    
-    result = pd.concat(balanced_parts, ignore_index=True)
-    result = result.sample(frac=1, random_state=seed).reset_index(drop=True)  # Shuffle
-    
-    logger.info(f"  Tổng sau cân bằng: {len(result):,} ({len(valid_majors)} ngành × {min_count:,})")
-    return result
+    return pd.concat(balanced_parts, ignore_index=True).sample(frac=1, random_state=seed).reset_index(drop=True)
 
 
-def create_dataset(block):
-    """Tạo bộ dữ liệu cho 1 khối"""
-    logger.info(f"\n{'='*60}")
+def create_dataset(block: str, label_source: str = "kbs"):
+    """Tạo bộ dữ liệu cho 1 khối."""
+    logger.info(f"\n{'=' * 60}")
     logger.info(f"TẠO DỮ LIỆU {block.upper()}")
-    logger.info(f"{'='*60}")
-    
-    # 1. Đọc dữ liệu gốc
+    logger.info(f"{'=' * 60}")
+
     df = load_and_rename(RAW_DATA_PATH)
-    
-    # 2. Lọc theo khối
-    filtered = filter_block(df, block)
+    filtered = filter_and_label_block(df, block, label_source=label_source)
 
-    output_path = DATA_PATH_KHTN if block == 'khtn' else DATA_PATH_KHXH
+    output_path = DATA_PATH_KHTN if block == "khtn" else DATA_PATH_KHXH
+    features = KHTN_FEATURES if block == "khtn" else KHXH_FEATURES
 
-    # 3. Thống kê
-    logger.info(f"\n  Thống kê cuối cùng:")
+    logger.info("\n  Thống kê cuối cùng:")
     logger.info(f"  Shape: {filtered.shape}")
-    features = KHTN_FEATURES if block == 'khtn' else KHXH_FEATURES
     for f in features:
         logger.info(
             f"    {f}: mean={filtered[f].mean():.2f}, std={filtered[f].std():.2f}, "
             f"min={filtered[f].min():.1f}, max={filtered[f].max():.1f}"
         )
 
-    # 4. Lưu 
     filtered.to_csv(output_path, index=False)
     logger.info(f"\n  Lưu: {output_path} ({len(filtered):,} mẫu)")
-
     return filtered
 
 
 def main():
-    """Tạo 2 bộ dữ liệu"""
-    logger.info("="*60)
+    # Chế độ raw chỉ qua biến môi trường (không hiển thị CLI công khai)
+    label_source = os.getenv("LABEL_SOURCE", "kbs").strip().lower() or "kbs"
+    if label_source not in ("raw", "kbs"):
+        label_source = "kbs"
+
+    logger.info("=" * 60)
     logger.info("TIỀN XỬ LÝ DỮ LIỆU THPT 2024")
-    logger.info("="*60)
-    
-    df_khtn = create_dataset('khtn')
-    df_khxh = create_dataset('khxh')
-    
-    logger.info(f"\n{'='*60}")
+    logger.info("=" * 60)
+
+    df_khtn = create_dataset("khtn", label_source=label_source)
+    df_khxh = create_dataset("khxh", label_source=label_source)
+
+    logger.info(f"\n{'=' * 60}")
     logger.info("HOÀN TẤT")
-    logger.info(f"{'='*60}")
+    logger.info(f"{'=' * 60}")
     logger.info(f"  KHTN: {len(df_khtn):,} mẫu → {DATA_PATH_KHTN}")
     logger.info(f"  KHXH: {len(df_khxh):,} mẫu → {DATA_PATH_KHXH}")
 
